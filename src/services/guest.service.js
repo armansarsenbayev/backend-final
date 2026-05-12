@@ -22,6 +22,7 @@ async function createGuest({ registryId, hostId, body }) {
   if (!reg) throw errors.NotFound('Registry');
   if (reg.hostId !== hostId) throw errors.Forbidden('Only the registry host can add guests');
 
+  // Parent must belong to the same registry (also enforced by DB CHECK constraint).
   if (body.parent_id) {
     const parent = await prisma.guest.findUnique({ where: { id: body.parent_id } });
     if (!parent) throw errors.NotFound('Parent guest');
@@ -79,4 +80,39 @@ async function listGuests({ registryId, requesterId, requesterRole, cursor, limi
   return { data: rows.map(serializeGuest), next_cursor: next };
 }
 
-module.exports = { createGuest, listGuests, serializeGuest };
+module.exports = { createGuest, listGuests, updateGuest, deleteGuest, serializeGuest };
+
+async function updateGuest({ id, registryId, hostId, body }) {
+  const reg = await prisma.registry.findUnique({ where: { id: registryId } });
+  if (!reg) throw errors.NotFound('Registry');
+  if (reg.hostId !== hostId) throw errors.Forbidden('Only the registry host can update guests');
+  const guest = await prisma.guest.findUnique({ where: { id } });
+  if (!guest || guest.registryId !== registryId) throw errors.NotFound('Guest');
+
+  if (body.parent_id) {
+    const parent = await prisma.guest.findUnique({ where: { id: body.parent_id } });
+    if (!parent || parent.registryId !== registryId) throw errors.ValidationError([{ field: 'parent_id', issue: 'must belong to the same registry' }]);
+  }
+  const updated = await prisma.guest.update({
+    where: { id },
+    data: {
+      ...(body.display_name && { displayName: body.display_name }),
+      ...(body.kinship_label && { kinshipLabel: body.kinship_label }),
+      ...(body.tier_rank !== undefined && { tierRank: body.tier_rank }),
+      ...(body.parent_id !== undefined && { parentId: body.parent_id }),
+      ...(body.user_id !== undefined && { userId: body.user_id }),
+    },
+  });
+  return serializeGuest(updated);
+}
+
+async function deleteGuest({ id, registryId, hostId }) {
+  const reg = await prisma.registry.findUnique({ where: { id: registryId } });
+  if (!reg) throw errors.NotFound('Registry');
+  if (reg.hostId !== hostId) throw errors.Forbidden('Only the registry host can delete guests');
+  const guest = await prisma.guest.findUnique({ where: { id } });
+  if (!guest || guest.registryId !== registryId) throw errors.NotFound('Guest');
+  // Unlink children before deleting
+  await prisma.guest.updateMany({ where: { parentId: id }, data: { parentId: null } });
+  await prisma.guest.delete({ where: { id } });
+}

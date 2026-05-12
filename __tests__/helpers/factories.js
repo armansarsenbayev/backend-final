@@ -27,7 +27,11 @@ async function makeUser({ role = 'GUEST', password = 'TestPass123!' } = {}) {
   const email = `user_${suffix}@example.com`;
   const username = `user_${suffix}`;
   const created = await authService.register({ email, username, password, role });
-  // Reload full user (register returns the public DTO).
+  // Bypass email verification for tests — mark verified directly in DB.
+  await prisma.user.update({
+    where: { id: created.id },
+    data: { isEmailVerified: true, emailVerifyToken: null, emailVerifyExpires: null },
+  });
   const full = await prisma.user.findUnique({ where: { id: created.id } });
   return { user: full, email, username, password };
 }
