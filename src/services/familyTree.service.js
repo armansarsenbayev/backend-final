@@ -8,9 +8,11 @@ async function getFamilyTree({ rootGuestId, maxDepth = 10 }) {
   const root = await prisma.guest.findUnique({ where: { id: rootGuestId } });
   if (!root) throw errors.NotFound('Guest');
 
-  const maxDepthInt = parseInt(maxDepth, 10);
+  const maxDepthInt = Math.max(1, Math.min(parseInt(maxDepth, 10) || 10, 20));
 
-  const rows = await prisma.$queryRawUnsafe(`
+  // Recursive CTE is the only supported way to traverse a self-referential
+  // tree in Prisma. $queryRaw with tagged template = parameterized, safe.
+  const rows = await prisma.$queryRaw`
     WITH RECURSIVE tree AS (
       SELECT
         g.id,
@@ -22,7 +24,7 @@ async function getFamilyTree({ rootGuestId, maxDepth = 10 }) {
         0            AS depth,
         ARRAY[g.id]  AS path
       FROM guests g
-      WHERE g.id = '${rootGuestId}'::uuid
+      WHERE g.id = ${rootGuestId}::uuid
 
       UNION ALL
 
@@ -61,7 +63,7 @@ async function getFamilyTree({ rootGuestId, maxDepth = 10 }) {
       ), 0) AS funded_kzt
     FROM tree t
     ORDER BY t.depth ASC, t."displayName" ASC
-  `);
+  `;
 
   return {
     root_id: rootGuestId,
