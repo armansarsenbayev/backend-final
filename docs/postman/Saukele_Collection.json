@@ -1,0 +1,256 @@
+{
+  "info": {
+    "name": "Saukele Digital Registry - FULL API",
+    "description": "Complete structured collection with role-based workflows and automated token management.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Authentication",
+      "item": [
+        {
+          "name": "Registration Presets",
+          "item": [
+            {
+              "name": "Register as HOST",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"host@saukele.kz\",\n  \"username\": \"host_user\",\n  \"password\": \"Saukele2025!\",\n  \"role\": \"HOST\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+              }
+            },
+            {
+              "name": "Register as GUEST",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.id) {",
+                      "    pm.environment.set(\"registered_guest_user_id\", jsonData.id);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"guest@saukele.kz\",\n  \"username\": \"guest_user\",\n  \"password\": \"Saukele2025!\",\n  \"role\": \"GUEST\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login Presets",
+          "item": [
+            {
+              "name": "Login as HOST",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.access_token) {",
+                      "    pm.environment.set(\"access_token\", jsonData.access_token);",
+                      "    pm.environment.set(\"refresh_token\", jsonData.refresh_token);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"host@saukele.kz\",\n  \"password\": \"Saukele2025!\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+              }
+            },
+            {
+              "name": "Login as GUEST",
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "var jsonData = pm.response.json();",
+                      "if (jsonData.access_token) {",
+                      "    pm.environment.set(\"access_token\", jsonData.access_token);",
+                      "    pm.environment.set(\"refresh_token\", jsonData.refresh_token);",
+                      "}"
+                    ],
+                    "type": "text/javascript"
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"guest@saukele.kz\",\n  \"password\": \"Saukele2025!\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] }
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Profile (Me)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id && jsonData.role === 'GUEST') {",
+                  "    pm.environment.set(\"registered_guest_user_id\", jsonData.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. HOST Actions",
+      "item": [
+        {
+          "name": "Create Registry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) { pm.environment.set(\"registry_id\", jsonData.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Aizhan & Daulet — Үйлену тойы\",\n  \"event_date\": \"2025-12-31T18:00:00Z\",\n  \"is_public\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/registries", "host": ["{{base_url}}"], "path": ["registries"] }
+          }
+        },
+        {
+          "name": "Add Gift to Registry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) { pm.environment.set(\"gift_id\", jsonData.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Сәукеле\",\n  \"description\": \"Traditional wedding headpiece\",\n  \"target_amount_kzt\": 450000,\n  \"required_tier_rank\": 1,\n  \"is_fragile\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/registries/{{registry_id}}/gifts", "host": ["{{base_url}}"], "path": ["registries", "{{registry_id}}", "gifts"] }
+          }
+        },
+        {
+          "name": "Invite Guest (By User ID)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.id) { pm.environment.set(\"guest_id\", jsonData.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"My Registered Friend\",\n  \"kinship_label\": \"dos\",\n  \"tier_rank\": 1,\n  \"user_id\": \"{{registered_guest_user_id}}\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/registries/{{registry_id}}/guests", "host": ["{{base_url}}"], "path": ["registries", "{{registry_id}}", "guests"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. GUEST Actions",
+      "item": [
+        {
+          "name": "View Family Tree",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/guests/{{guest_id}}/family-tree", "host": ["{{base_url}}"], "path": ["guests", "{{guest_id}}", "family-tree"] }
+          }
+        },
+        {
+          "name": "View Registry",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/registries/{{registry_id}}", "host": ["{{base_url}}"], "path": ["registries", "{{registry_id}}"] }
+          }
+        },
+        {
+          "name": "View Gifts (Filtered by Tier)",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/registries/{{registry_id}}/gifts", "host": ["{{base_url}}"], "path": ["registries", "{{registry_id}}", "gifts"] }
+          }
+        },
+        {
+          "name": "Make Contribution",
+          "request": {
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guest_id\": \"{{guest_id}}\",\n  \"amount_original\": 100.00,\n  \"currency_original\": \"EUR\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": { "raw": "{{base_url}}/gifts/{{gift_id}}/contributions", "host": ["{{base_url}}"], "path": ["gifts", "{{gift_id}}", "contributions"] }
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  }
+}

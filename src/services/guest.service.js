@@ -1,0 +1,82 @@
+'use strict';
+
+const { prisma } = require('../lib/prisma');
+const { errors } = require('../lib/errors');
+const { decodeCursor, buildNextCursor } = require('../utils/pagination');
+
+function serializeGuest(g) {
+  return {
+    id: g.id,
+    registry_id: g.registryId,
+    parent_id: g.parentId,
+    user_id: g.userId,
+    display_name: g.displayName,
+    kinship_label: g.kinshipLabel,
+    tier_rank: g.tierRank,
+    created_at: g.createdAt,
+  };
+}
+
+async function createGuest({ registryId, hostId, body }) {
+  const reg = await prisma.registry.findUnique({ where: { id: registryId } });
+  if (!reg) throw errors.NotFound('Registry');
+  if (reg.hostId !== hostId) throw errors.Forbidden('Only the registry host can add guests');
+
+  if (body.parent_id) {
+    const parent = await prisma.guest.findUnique({ where: { id: body.parent_id } });
+    if (!parent) throw errors.NotFound('Parent guest');
+    if (parent.registryId !== registryId) {
+      throw errors.ValidationError([
+        { field: 'parent_id', issue: 'must belong to the same registry' },
+      ]);
+    }
+  }
+
+  const guest = await prisma.guest.create({
+    data: {
+      registryId,
+      parentId: body.parent_id ?? null,
+      userId: body.user_id ?? null,
+      displayName: body.display_name,
+      kinshipLabel: body.kinship_label,
+      tierRank: body.tier_rank,
+    },
+  });
+
+  return serializeGuest(guest);
+}
+
+async function listGuests({ registryId, requesterId, requesterRole, cursor, limit }) {
+  const reg = await prisma.registry.findUnique({ where: { id: registryId } });
+  if (!reg) throw errors.NotFound('Registry');
+  if (
+    requesterRole !== 'ADMIN' &&
+    reg.hostId !== requesterId &&
+    !reg.isPublic
+  ) {
+    throw errors.Forbidden('Not authorized to view guests of this registry');
+  }
+
+  const decoded = decodeCursor(cursor);
+  const where = { registryId };
+  if (decoded?.createdAt && decoded?.id) {
+    where.OR = [
+      { createdAt: { lt: new Date(decoded.createdAt) } },
+      { AND: [{ createdAt: new Date(decoded.createdAt) }, { id: { lt: decoded.id } }] },
+    ];
+  }
+
+  const rows = await prisma.guest.findMany({
+    where,
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    take: limit,
+  });
+
+  const next = buildNextCursor(rows, limit, (it) => ({
+    createdAt: it.createdAt.toISOString(),
+    id: it.id,
+  }));
+  return { data: rows.map(serializeGuest), next_cursor: next };
+}
+
+module.exports = { createGuest, listGuests, serializeGuest };

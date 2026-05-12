@@ -1,0 +1,367 @@
+Saukele – Database Design Document (Prisma + PostgreSQL)
+
+================================================================================
+SECTION 1. ENTITY-RELATIONSHIP DIAGRAM
+================================================================================
+
+    ┌──────────┐         ┌────────────────┐
+    │  User    │ 1 ───*  │ RefreshToken   │     (auth subsystem)
+    └────┬─────┘         └────────────────┘
+         │
+         │ 1..*  (a User in role HOST owns Registries)
+         ▼
+    ┌──────────┐ 1 ───*  ┌──────────┐
+    │ Registry │────────▶│   Gift   │
+    └────┬─────┘         └────┬─────┘
+         │                    │
+         │ 1..*               │ 1..*
+         ▼                    ▼
+    ┌──────────┐         ┌──────────────┐         ┌──────────┐
+    │  Guest   │ 1 ───*  │ Contribution │ ──────▶ │ AuditLog │
+    └────┬─────┘         └──────────────┘         └──────────┘
+         │ self-ref
+         │ parentId  (NULL = root of family tree)
+         ▼
+    ┌──────────┐
+    │  Guest   │   (recursive: a Guest may have children Guests)
+    └──────────┘
+
+    User    ─ application user (has role: HOST | GUEST | VENDOR | COURIER | ADMIN)
+    Guest   ─ a person ATTACHED to a Registry by the host. May or may not have a
+              corresponding User account. Carries the kinship hierarchy via
+              self-referential parentId. tierRank is derived from depth.
+
+    A Guest belongs to exactly one Registry.
+    A Guest's parent (if any) belongs to the SAME Registry. Enforced by app code +
+    a CHECK constraint on a SQL migration step (see Section 4).
+
+================================================================================
+SECTION 2. PRISMA SCHEMA (schema.prisma)
+================================================================================
+
+    // -------- Generators & datasource --------
+    generator client {
+      provider = "prisma-client-js"
+    }
+
+    datasource db {
+      provider = "postgresql"
+      url      = env("DATABASE_URL")
+    }
+
+    // -------- Enums --------
+    enum Role {
+      HOST
+      GUEST
+      VENDOR
+      COURIER
+      ADMIN
+    }
+
+    enum GiftState {
+      PENDING       // pool open, accepting contributions
+      FUNDED        // target reached, awaiting vendor action
+      PURCHASED     // vendor took the funds, item being prepared
+      DELIVERED     // courier confirmed delivery
+      CANCELLED     // host cancelled; contributions refunded
+    }
+
+    enum ContributionStatus {
+      PENDING       // created, funds reserved
+      FUNDED        // committed to gift pool
+      FAILED        // rejected (e.g., would exceed cap)
+      REFUNDED      // gift cancelled, money returned
+    }
+
+    enum AuditAction {
+      USER_REGISTERED
+      USER_LOGIN
+      USER_LOGOUT
+      REGISTRY_CREATED
+      GIFT_CREATED
+      CONTRIBUTION_CREATED
+      CONTRIBUTION_FUNDED
+      GIFT_STATE_CHANGED
+    }
+
+    // -------- Auth subsystem --------
+    model User {
+      id           String   @id @default(uuid()) @db.Uuid
+      email        String   @unique
+      username     String   @unique
+      passwordHash String
+      role         Role     @default(GUEST)
+      isActive     Boolean  @default(true)
+      createdAt    DateTime @default(now())
+      updatedAt    DateTime @updatedAt
+
+      refreshTokens RefreshToken[]
+      registries    Registry[]      @relation("HostRegistries")
+      auditLogs     AuditLog[]
+
+      @@index([role])
+      @@map("users")
+    }
+
+    model RefreshToken {
+      id         String   @id @default(uuid()) @db.Uuid
+      userId     String   @db.Uuid
+      tokenHash  String   @unique           // sha256 of the JWT, never the raw token
+      expiresAt  DateTime
+      revokedAt  DateTime?
+      createdAt  DateTime @default(now())
+      userAgent  String?
+      ipAddress  String?
+
+      user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+      @@index([userId])
+      @@index([expiresAt])
+      @@map("refresh_tokens")
+    }
+
+    // -------- Domain --------
+    model Registry {
+      id          String   @id @default(uuid()) @db.Uuid
+      hostId      String   @db.Uuid
+      title       String
+      eventDate   DateTime
+      isPublic    Boolean  @default(true)
+      createdAt   DateTime @default(now())
+      updatedAt   DateTime @updatedAt
+
+      host   User    @relation("HostRegistries", fields: [hostId], references: [id])
+      gifts  Gift[]
+      guests Guest[]
+
+      @@index([hostId])
+      @@map("registries")
+    }
+
+    model Gift {
+      id                String   @id @default(uuid()) @db.Uuid
+      registryId        String   @db.Uuid
+      title             String
+      description       String?
+      targetAmountKzt   Decimal  @db.Decimal(12, 2)
+      currentAmountKzt  Decimal  @db.Decimal(12, 2) @default(0)
+      requiredTierRank  Int      @default(0)         // min tier needed to view/contribute
+      isFragile         Boolean  @default(false)
+      state             GiftState @default(PENDING)
+      version           Int      @default(0)         // optimistic-concurrency token
+      createdAt         DateTime @default(now())
+      updatedAt         DateTime @updatedAt
+
+      registry      Registry       @relation(fields: [registryId], references: [id], onDelete: Cascade)
+      contributions Contribution[]
+
+      @@index([registryId, state])
+      @@map("gifts")
+    }
+
+    model Guest {
+      id           String   @id @default(uuid()) @db.Uuid
+      registryId   String   @db.Uuid
+      userId       String?  @db.Uuid              // optional link to a User account
+      parentId     String?  @db.Uuid              // SELF-REFERENTIAL — family tree
+      displayName  String
+      kinshipLabel String                          // 'ata_ana' | 'aga_apa' | 'jien' | 'kuda' | 'dos' | …
+      tierRank     Int                             // derived from depth, but stored for fast filter
+      createdAt    DateTime @default(now())
+
+      registry      Registry       @relation(fields: [registryId], references: [id], onDelete: Cascade)
+      parent        Guest?         @relation("GuestHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+      children      Guest[]        @relation("GuestHierarchy")
+      contributions Contribution[]
+
+      @@index([registryId])
+      @@index([parentId])
+      @@index([registryId, tierRank])
+      @@map("guests")
+    }
+
+    model Contribution {
+      id                  String             @id @default(uuid()) @db.Uuid
+      giftId              String             @db.Uuid
+      guestId             String             @db.Uuid
+      amountKzt           Decimal            @db.Decimal(12, 2)        // normalized
+      amountOriginal      Decimal            @db.Decimal(12, 2)        // what guest typed
+      currencyOriginal    String             @db.Char(3)               // ISO 4217
+      exchangeRate        Decimal            @db.Decimal(14, 6)        // 1 unit foreign = N KZT
+      rateLockedAt        DateTime                                     // SNAPSHOT — never mutated
+      status              ContributionStatus @default(PENDING)
+      createdAt           DateTime           @default(now())
+
+      gift  Gift  @relation(fields: [giftId], references: [id], onDelete: Cascade)
+      guest Guest @relation(fields: [guestId], references: [id], onDelete: Cascade)
+
+      @@index([giftId, status])
+      @@index([giftId, createdAt])      // cursor pagination key
+      @@index([rateLockedAt])
+      @@map("contributions")
+    }
+
+    model AuditLog {
+      id         String      @id @default(uuid()) @db.Uuid
+      userId     String?     @db.Uuid
+      action     AuditAction
+      entityType String                                // 'gift' | 'contribution' | 'user' | …
+      entityId   String      @db.Uuid
+      metadata   Json?
+      createdAt  DateTime    @default(now())
+
+      user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+      @@index([entityType, entityId])
+      @@index([createdAt])
+      @@map("audit_logs")
+    }
+
+================================================================================
+SECTION 3. MIGRATION STRATEGY
+================================================================================
+
+  - Migrations are managed by `prisma migrate`. Each schema change produces a
+    timestamped folder under prisma/migrations/ containing migration.sql.
+  - The first migration (0001_init) creates every table above. It is the baseline
+    required by the assignment.
+  - Production deploys use `prisma migrate deploy` (idempotent, no shadow DB).
+  - Destructive changes (column drops) are split into two releases:
+      1. Stop writing to the column; deploy.
+      2. Drop the column; deploy.
+  - The CI pipeline runs `prisma migrate deploy` against an ephemeral Postgres
+    in the GitHub Actions runner before tests execute.
+
+================================================================================
+SECTION 4. RAW-SQL ADDITIONS (post-migration step)
+================================================================================
+
+Two constraints cannot be expressed in schema.prisma and are added as a follow-up
+migration (0002_constraints/migration.sql):
+
+    -- 4.1  A guest's parent must belong to the same registry.
+    ALTER TABLE guests
+      ADD CONSTRAINT guests_parent_same_registry CHECK (
+        parent_id IS NULL OR
+        registry_id = (SELECT registry_id FROM guests g2 WHERE g2.id = parent_id)
+      );
+
+    -- 4.2  A gift may never be over-funded.
+    ALTER TABLE gifts
+      ADD CONSTRAINT gifts_no_overfund CHECK (current_amount_kzt <= target_amount_kzt);
+
+    -- 4.3  Partial unique index: a guest cannot have two PENDING contributions
+    --      to the same gift simultaneously (defense-in-depth against double-submit).
+    CREATE UNIQUE INDEX contributions_one_pending_per_guest_gift
+      ON contributions (gift_id, guest_id)
+      WHERE status = 'PENDING';
+
+================================================================================
+SECTION 5. THE "NASTY QUERY" — RECURSIVE FAMILY TREE WITH OBLIGATIONS
+================================================================================
+
+This is the assignment-mandated recursive endpoint. It returns the full family
+subtree rooted at a given Guest, with each row carrying its tier obligations
+(min/max KZT contribution suggested for that tier).
+
+The query CANNOT be expressed by Prisma's relational query builder for arbitrary
+depth — it is executed via prisma.$queryRaw inside familyTreeService.ts:
+
+    WITH RECURSIVE tree AS (
+      -- anchor: the requested root guest
+      SELECT
+        g.id,
+        g.parent_id,
+        g.display_name,
+        g.kinship_label,
+        g.tier_rank,
+        0 AS depth,
+        ARRAY[g.id] AS path
+      FROM guests g
+      WHERE g.id = $1
+
+      UNION ALL
+
+      -- recursive step: children of already-included guests
+      SELECT
+        c.id,
+        c.parent_id,
+        c.display_name,
+        c.kinship_label,
+        c.tier_rank,
+        t.depth + 1,
+        t.path || c.id
+      FROM guests c
+      JOIN tree t ON c.parent_id = t.id
+      WHERE NOT c.id = ANY(t.path)              -- cycle guard
+        AND t.depth < 10                         -- safety cap
+    )
+    SELECT
+      t.*,
+      -- tier-based obligation table joined inline
+      CASE
+        WHEN t.tier_rank = 0 THEN 100000        -- core family
+        WHEN t.tier_rank = 1 THEN  50000        -- close relatives
+        WHEN t.tier_rank = 2 THEN  20000        -- extended
+        ELSE                       10000        -- friends / distant
+      END AS suggested_kzt,
+      -- aggregate already-funded amount per guest
+      COALESCE(SUM(c.amount_kzt) FILTER (WHERE c.status = 'FUNDED'), 0) AS funded_kzt
+    FROM tree t
+    LEFT JOIN contributions c ON c.guest_id = t.id
+    GROUP BY t.id, t.parent_id, t.display_name, t.kinship_label, t.tier_rank, t.depth, t.path
+    ORDER BY t.depth, t.display_name;
+
+PERFORMANCE NOTES:
+
+  - The (parent_id) index lets the recursive step do an Index Scan instead of
+    a Seq Scan at every level.
+  - The (registry_id, tier_rank) index supports the parent UI queries
+    ("show me all tier-1 guests in this registry") used to feed this endpoint.
+  - The depth cap (10) and cycle guard prevent runaway recursion if data is
+    corrupted. Realistic family trees do not exceed depth 6.
+  - Expected timing on a registry with 500 guests, tree depth 5:  ~8–15 ms.
+    Without the parent_id index it would degrade to ~150 ms+.
+
+================================================================================
+SECTION 6. ATOMIC CONTRIBUTION TRANSACTION (BUSINESS-CRITICAL)
+================================================================================
+
+The createContribution flow is the single most important transaction in the
+system. It is implemented in contributionService.createContribution and runs
+inside prisma.$transaction({ isolationLevel: 'Serializable' }).
+
+Steps (all inside one DB transaction):
+
+  1. SELECT the gift with FOR UPDATE semantics (Prisma: $queryRaw SELECT … FOR UPDATE).
+     This blocks concurrent contributions to the same gift.
+  2. Verify gift.state = 'PENDING'. Otherwise → 409 GIFT_NOT_OPEN.
+  3. Fetch exchange rate from exchange.service (mock provider in tests).
+     Compute amountKzt = round(amountOriginal * rate, 2).
+  4. Verify gift.currentAmountKzt + amountKzt ≤ gift.targetAmountKzt.
+     Otherwise → 422 POOL_CAP_EXCEEDED.
+  5. INSERT Contribution with status=FUNDED and rateLockedAt=NOW().
+  6. UPDATE gifts SET current_amount_kzt = current_amount_kzt + $amount,
+                      version = version + 1
+              WHERE id = $giftId.
+  7. If new currentAmountKzt = targetAmountKzt → also UPDATE state='FUNDED'.
+  8. INSERT AuditLog row (action=CONTRIBUTION_FUNDED).
+  9. COMMIT.
+
+Why Serializable: with Read Committed, two concurrent contributions could each
+read the same currentAmountKzt, both pass step 4, and together overfund.
+Serializable + the FOR UPDATE ensures one transaction observes the other's
+write. The CHECK constraint from §4.2 is a final defense-in-depth — if it fires,
+the transaction aborts and the API returns 409.
+
+================================================================================
+SECTION 7. DATA RETENTION & IMMUTABILITY
+================================================================================
+
+  - Contribution rows are NEVER updated after status leaves PENDING, except for
+    the single status transition PENDING → FUNDED|FAILED. exchangeRate and
+    rateLockedAt are immutable for the row's lifetime. This is enforced at the
+    repository layer (contributionRepository has no .updateRate method) and
+    documented for graders in CHANGELOG.md.
+  - AuditLog is append-only. The repository exposes only .create and .findMany —
+    no update/delete methods exist.

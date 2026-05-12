@@ -1,0 +1,159 @@
+Saukele – Threat Model & Security Architecture
+
+================================================================================
+SECTION 1. STRIDE ANALYSIS
+================================================================================
+
+1.1 SPOOFING — JWT FORGERY & SESSION HIJACKING
+
+  Threat:  An attacker forges or replays a JWT to impersonate a user.
+  Controls:
+    - Access tokens signed with HS256 using JWT_ACCESS_SECRET (≥ 32 chars,
+      validated at boot by Zod). Short TTL (15 min).
+    - Refresh tokens signed with a SEPARATE secret (JWT_REFRESH_SECRET) so
+      compromise of one does not compromise the other.
+    - Refresh tokens are single-use: every /auth/refresh issues a new pair and
+      revokes the presented one. Replay of a used refresh token → 401.
+    - Logout pushes the refresh token's jti to a Redis denylist with TTL equal
+      to the token's remaining life. Denylist is consulted on every refresh.
+    - Refresh tokens are stored in DB only as SHA-256 hashes. A DB leak does
+      not yield usable tokens.
+    - All token endpoints over HTTPS in production (terminator at the proxy
+      layer; HTTP is allowed only for localhost).
+
+1.2 TAMPERING — SQL INJECTION & PARAMETER POLLUTION
+
+  Threat:  Malicious input mutates SQL or bypasses validation.
+  Controls:
+    - Prisma exclusively uses parameterized queries; the generated client
+      never interpolates raw user input. The two places that use $queryRaw
+      (the recursive family tree, the FOR UPDATE select inside the
+      contribution transaction) use Prisma.sql tagged templates which
+      parameterize all interpolations.
+    - Every request body, query, and path parameter is validated by a Zod
+      schema BEFORE reaching the controller. Unknown fields are stripped
+      (.strict() on each schema).
+    - JSON body size capped at 100 KB by the express.json() limit.
+
+1.3 REPUDIATION — UNTRACEABLE STATE CHANGES
+
+  Threat:  A user denies having performed a financially significant action.
+  Controls:
+    - Every CONTRIBUTION_FUNDED, GIFT_STATE_CHANGED, USER_LOGIN, USER_LOGOUT,
+      REGISTRY_CREATED, and GIFT_CREATED writes an AuditLog row inside the
+      same transaction as the business write. Rollback of business write
+      rolls back the audit row, so audit and ledger never diverge.
+    - The AuditLog repository exposes only .create and .findMany. No update
+      or delete method exists, so the table is functionally append-only.
+    - request_id is propagated through all log lines via pino mixin, so a
+      single request can be traced across HTTP, service, and DB layers.
+
+1.4 INFORMATION DISCLOSURE — UNAUTHORIZED DATA ACCESS
+
+  Threat:  A guest sees gifts they should not see (kinship-tier leak); a
+           guest sees another guest's contributions.
+  Controls:
+    - Tier filtering is enforced at the SERVICE layer, not just the
+      controller. Even if a controller forgets the check, the service
+      layer applies it.
+    - All list endpoints accept the requesting user's tier_rank from
+      req.user (set by auth middleware) and inject a WHERE clause filtering
+      by required_tier_rank.
+    - Error responses are intentionally generic for 401/403/404 — they do
+      not leak whether a resource exists. (404 vs. 403 distinction is only
+      shown when the user already has read access to the parent resource.)
+
+1.5 DENIAL OF SERVICE — BRUTE FORCE & FLOODING
+
+  Threat:  Credential stuffing or repeated registration spam.
+  Controls:
+    - Redis token-bucket rate limit on /auth/login and /auth/register,
+      keyed by IP. Default: 5 requests / 60 s. Limits are configurable
+      via env (RATE_LIMIT_WINDOW_MS, RATE_LIMIT_MAX).
+    - Password verification uses bcrypt cost factor 12 — intentionally slow.
+    - Recursive family-tree query is bounded by max_depth ≤ 10 and a
+      cycle-guard array, preventing exponential blowup on malformed data.
+    - JSON body size limit (100 KB) prevents large-payload attacks.
+
+1.6 ELEVATION OF PRIVILEGE — RBAC BYPASS
+
+  Threat:  A GUEST role caller hits a HOST-only or ADMIN-only endpoint.
+  Controls:
+    - middleware/rbac.js wraps every role-restricted route and returns 403
+      for mismatched roles (NOT 401; 401 is reserved for missing/invalid
+      tokens).
+    - role is encoded inside the access token as a claim and re-verified on
+      every request — a token issued for role=GUEST cannot escalate by
+      changing the User row in the DB until the access token expires
+      (max 15 min window, acceptable risk).
+    - /auth/register refuses role=ADMIN. ADMIN users are created exclusively
+      via prisma/seed.js (CLI) and require physical access to the deploy
+      environment.
+    - Integration test tests/integration/rbac.test.js asserts 403 on every
+      cross-role attempt.
+
+================================================================================
+SECTION 2. SECRET MANAGEMENT
+================================================================================
+
+  - Boot-time validation via src/config/env.js using Zod.
+  - The schema rejects:
+      • missing required keys,
+      • secrets shorter than 32 chars,
+      • literal placeholder values: "changeme", "secret", "hello", "hello world",
+        "password", "test", and the empty string,
+      • CORS_ORIGINS containing "*" when NODE_ENV=production,
+      • EXCHANGE_PROVIDER=live without a non-empty EXCHANGE_API_KEY.
+  - process.exit(1) is called immediately on validation failure, with the
+    failed field names printed (not their values).
+  - process.env is read ONLY inside env.js. Other modules import the frozen
+    `env` object. Enforced by an ESLint rule.
+  - .env is gitignored. .env.example is committed and lists every key with
+    an example or empty placeholder marked with `# REQUIRED`.
+
+================================================================================
+SECTION 3. PASSWORD POLICY
+================================================================================
+
+  - Hashing: bcrypt with cost factor 12 (configurable via BCRYPT_ROUNDS, range 10–14).
+  - At-rest: only User.passwordHash exists. There is no password reminder, no
+    "secret question", no plaintext column, ever.
+  - Validation: Zod refine rule — min 10 chars, contains at least one letter
+    AND at least one digit. Common-password blocklist is out of scope for
+    Sprint 1 (planned for Sprint 2).
+  - Verification: bcrypt.compare is constant-time. Login responses do NOT
+    distinguish between "user not found" and "wrong password" — both yield
+    401 with code INVALID_CREDENTIALS.
+
+================================================================================
+SECTION 4. CORS & TRANSPORT
+================================================================================
+
+  - CORS allowlist is sourced from CORS_ORIGINS (comma-separated). The cors
+    middleware is configured with a function that checks origin ∈ allowlist.
+  - Wildcard "*" is rejected in production by env validation.
+  - In development, http://localhost:* is allowed for convenience.
+  - The Express app sets the standard helmet defaults, including:
+      • Content-Security-Policy (default-src 'self'),
+      • Strict-Transport-Security (production only),
+      • X-Content-Type-Options: nosniff,
+      • X-Frame-Options: DENY,
+      • Referrer-Policy: no-referrer.
+  - Cookies are NOT used. Tokens are returned in JSON response bodies and
+    expected to be sent in the Authorization: Bearer header.
+
+================================================================================
+SECTION 5. THREATS DEFERRED TO LATER SPRINTS
+================================================================================
+
+These threats are acknowledged but their controls are out of scope for the
+20% milestone:
+
+  - Payment fraud (Kaspi Pay integration not implemented).
+  - Account recovery (no email-reset flow yet).
+  - 2FA / TOTP enrollment.
+  - Common-password blocklist on /auth/register.
+  - Rate limiting on non-auth endpoints.
+  - Per-user request quotas.
+  - Vulnerability scanning of dependencies in CI (planned: `npm audit --omit=dev`
+    gated job in Sprint 2).

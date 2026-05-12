@@ -1,0 +1,206 @@
+Saukele – Digital Wedding Registry & Kazakh Tradition Logistics
+FEATURES SPECIFICATION (Sprint 1 — 20% Milestone Scope)
+
+================================================================================
+SECTION 1. SCOPE STATEMENT
+================================================================================
+
+This document covers the features delivered in Sprint 1 (the 20% milestone).
+Sprint-1 deliverables are:
+
+  A. Full authentication subsystem (register, login, logout, refresh).
+  B. Role-based access control across all protected endpoints.
+  C. Registry creation and gift management for the HOST role.
+  D. Family-tree (Guest) creation with self-referential parent linkage.
+  E. Atomic multi-currency contribution to a gift pool.
+  F. Recursive family-tree query returning gift-tier obligations.
+  G. Audit log for every state-changing financial operation.
+
+Out of scope for this sprint (planned for later milestones):
+  - Vendor / Courier flows and delivery state machine.
+  - Real payment gateway (Kaspi Pay) integration.
+  - Notification scheduler (greeting-period suppression).
+  - Live exchange-rate provider (mock provider is used).
+  - Dispute resolution and admin moderation tools.
+
+================================================================================
+SECTION 2. USER ROLES (Sprint 1)
+================================================================================
+
+  HOST     — creates and owns a Registry, adds Gifts, manages the family tree.
+  GUEST    — views gifts available to their tier and contributes to pools.
+  ADMIN    — read-only platform operator; required to demonstrate RBAC
+             enforcement (a non-admin token MUST receive 403, not 401, when
+             calling /admin/*). Created via a CLI seed, never via /auth/register.
+
+  VENDOR and COURIER roles exist in the User.role enum but their feature
+  surfaces are out of scope for Sprint 1.
+
+================================================================================
+SECTION 3. FEATURES BY ROLE (Sprint 1)
+================================================================================
+
+3.1 ANY USER (anonymous + authenticated)
+  - GET /healthz                       liveness probe (no auth)
+  - POST /auth/register                create an account (HOST or GUEST role)
+  - POST /auth/login                   exchange credentials for token pair
+  - POST /auth/refresh                 rotate refresh token
+  - POST /auth/logout                  revoke refresh token
+  - GET  /auth/me                      get own profile
+
+3.2 HOST
+  - POST /registries                   create a registry
+  - GET  /registries                   list own registries
+  - GET  /registries/{id}               read a registry
+  - POST /registries/{id}/gifts         add a gift to the pool
+  - GET  /registries/{id}/gifts         list gifts in own registry (no tier filter)
+  - POST /registries/{id}/guests        add a guest to the family tree
+  - GET  /registries/{id}/guests        list guests
+  - GET  /guests/{id}/family-tree       run the recursive obligations query
+
+3.3 GUEST
+  - GET  /registries/{id}                read a registry (must be public OR be linked guest)
+  - GET  /registries/{id}/gifts          list gifts FILTERED by own tier_rank
+  - GET  /gifts/{id}                     read a single gift (tier-checked)
+  - GET  /gifts/{id}/contributions       list contributions to a gift (tier-checked)
+  - POST /gifts/{id}/contributions       contribute to a pool (atomic)
+
+3.4 ADMIN
+  - GET  /admin/users                   list users with optional role filter
+
+================================================================================
+SECTION 4. CORE BUSINESS WORKFLOWS
+================================================================================
+
+4.1 REGISTRATION & LOGIN
+
+  1. Client POSTs /auth/register with {email, username, password, role}.
+     - role=ADMIN is rejected (422).
+     - email and username are validated unique.
+     - password ≥ 10 chars and contains a letter and a digit.
+     - rate-limited 5/min/IP.
+  2. Server bcrypt-hashes (cost 12) and creates the User row.
+  3. Returns 201 + the User object (no tokens; client must log in).
+
+  4. Client POSTs /auth/login with {email, password}.
+     - rate-limited 5/min/IP.
+  5. Server verifies hash, signs an access token (HS256, 15 min) and a refresh
+     token (HS256, 7 day, separate secret).
+  6. SHA-256 of the refresh token is stored in refresh_tokens.token_hash. The
+     raw token is returned only once, in the response.
+  7. Returns 200 + TokenPair.
+
+4.2 TOKEN REFRESH (rotation)
+
+  1. Client POSTs /auth/refresh with {refresh_token}.
+  2. Server verifies signature + expiry, looks up the token by its hash, and
+     checks revoked_at IS NULL and not in the Redis denylist.
+  3. The OLD refresh token is revoked (revoked_at = now()).
+  4. A NEW access + refresh pair is issued and returned.
+  5. If the same refresh token is presented twice (replay), step 2 fails →
+     401 + reason "refresh token already used".
+
+4.3 LOGOUT
+
+  1. Client POSTs /auth/logout with {refresh_token} and a valid access token.
+  2. Server marks refresh_tokens.revoked_at and pushes the token's jti to a
+     Redis denylist with TTL = remaining lifetime.
+  3. Returns 204.
+
+4.4 RBAC ENFORCEMENT
+
+  - All non-/auth routes pass through middleware/auth.js. Missing or invalid
+    access token → 401 UNAUTHENTICATED.
+  - Role-restricted routes (e.g., /registries POST, /admin/*) additionally
+    pass through middleware/rbac.js with a list of allowed roles.
+  - Authenticated user with the WRONG role → 403 FORBIDDEN. This is a hard
+    distinction graded by the assignment.
+
+4.5 ATOMIC CONTRIBUTION (the headline transaction)
+
+  Inputs:  giftId (path), {guest_id, amount_original, currency_original} (body).
+  Auth:    bearer token, role ∈ {GUEST, HOST}.
+  Tier:    requesting user's tier_rank ≤ gift.required_tier_rank, else 403.
+
+  Algorithm (inside prisma.$transaction({ isolationLevel: 'Serializable' })):
+
+    1. SELECT … FROM gifts WHERE id = $1 FOR UPDATE.    (lock the row)
+    2. Reject if gift.state ≠ 'PENDING'                 → 409 GIFT_NOT_OPEN
+    3. rate = exchange.getRate(currency_original, 'KZT')
+       Reject if currency unsupported                    → 422 UNSUPPORTED_CURRENCY
+    4. amountKzt = round(amount_original * rate, 2)
+    5. Reject if current + amountKzt > target           → 422 POOL_CAP_EXCEEDED
+    6. INSERT contribution {status: FUNDED,
+                            exchange_rate: rate,
+                            rate_locked_at: now()}
+    7. UPDATE gifts SET current_amount_kzt = + amountKzt, version = +1
+    8. If new current = target: UPDATE state = 'FUNDED'
+    9. INSERT audit_log {action: CONTRIBUTION_FUNDED, …}
+   10. COMMIT.
+
+  Concurrency proof: two parallel POSTs to the same nearly-full gift will
+  serialize at step 1; the second will see the updated current_amount_kzt
+  and fail at step 5 with 422 POOL_CAP_EXCEEDED. The integration test in
+  tests/integration/contribution.test.js fires N=10 parallel requests and
+  asserts that exactly the right number succeed.
+
+  Defense in depth: Postgres CHECK (current ≤ target) on the gifts table will
+  abort the transaction if application logic ever has a bug.
+
+4.6 RECURSIVE FAMILY-TREE QUERY
+
+  Endpoint: GET /guests/{guest_id}/family-tree?max_depth=10
+  Auth:     any authenticated user; non-host requesters must be in the same
+            registry as the queried guest, else 403.
+
+  Implementation: a single SQL statement using `WITH RECURSIVE` (see
+  database-schema.txt §5). The statement returns one row per descendant
+  guest with:
+    - depth        (0 at the requested root)
+    - kinship_label, tier_rank
+    - suggested_kzt (tier obligation lookup, hard-coded table)
+    - funded_kzt   (already contributed by this guest, FUNDED only)
+
+  Cycle protection: array-tracking `path` column + WHERE NOT id = ANY(path).
+  Depth cap: WHERE depth < max_depth (default 10).
+
+================================================================================
+SECTION 5. CONSTRAINTS & INVARIANTS
+================================================================================
+
+  5.1 No over-funding.       Enforced at three layers:
+                             (a) service-level check inside the transaction,
+                             (b) Postgres CHECK constraint,
+                             (c) optimistic-lock `version` column on Gift.
+
+  5.2 Snapshot immutability. Contribution.exchange_rate and rate_locked_at are
+                             never updated after row creation. Repository
+                             exposes no .update method on these columns.
+
+  5.3 Tier scoping.          A GUEST may only see Gifts where
+                             gift.required_tier_rank ≥ guest.tier_rank
+                             (lower number = higher tier = more access).
+
+  5.4 Self-referential safety. A Guest's parent must belong to the same Registry.
+                              Enforced by app + a Postgres CHECK constraint.
+
+  5.5 Audit completeness.    Every CONTRIBUTION_FUNDED, USER_LOGIN, LOGOUT,
+                             REGISTRY_CREATED, GIFT_CREATED, and
+                             GIFT_STATE_CHANGED event writes one AuditLog row,
+                             inside the same DB transaction as the business write.
+
+  5.6 Token rotation.        Refresh tokens are single-use. Reusing a refresh
+                             token after rotation → 401 + revocation cascade
+                             (all tokens of that user invalidated, optional
+                             feature behind a feature flag in Sprint 1).
+
+================================================================================
+SECTION 6. NON-FUNCTIONAL REQUIREMENTS
+================================================================================
+
+  - Latency target: P95 of /gifts/{id}/contributions POST < 150 ms locally.
+  - Availability: not in scope for Sprint 1 (single-instance dev deploy).
+  - Security: helmet defaults, CORS allowlist (no '*'), bcrypt cost 12,
+              rate-limit 5/min/IP on /auth/login and /auth/register.
+  - Observability: pino structured logs with request_id, status, duration_ms,
+                   user_id. One line per request.

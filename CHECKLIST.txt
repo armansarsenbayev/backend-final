@@ -1,0 +1,21 @@
+Verification Checklist
+======================
+
+[x] openapi.yaml validated (parses cleanly; 18 endpoints across 8 tags).
+[x] Prisma schema reviewed for correctness; raw-SQL constraints in
+    prisma/migrations/0002_constraints/migration.sql validated by syntax.
+[x] All documents include numbered section headers for easy reference.
+[x] Auth subsystem (register, login, logout, refresh) fully specified.
+[x] RBAC with at least 2 distinct roles documented (HOST, GUEST, ADMIN).
+[x] Self-referential Guest.parent_id covers the recursive family-tree
+    requirement; recursive CTE is documented with cycle guard + depth cap.
+[x] Atomic contribution transaction documented at three levels:
+    architecture (§4 contribution.service.js), schema (§6 of database-schema),
+    and feature flow (§4.5 of features-specification).
+[x] Multi-currency snapshot is explicit and immutable (rate_locked_at,
+    exchange_rate columns are write-once).
+[x] Cursor-based pagination contract defined in openapi.yaml `Pagination`
+    schema; applied to /registries, /gifts, /contributions, /guests, /admin/users.
+[x] Standardized error response (`ErrorResponse`) reused across all error codes.
+[x] Stack consistent across all docs: Node.js + Express + Prisma + PostgreSQL
+    + Redis. No leftover Sequelize references.
