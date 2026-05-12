@@ -21,7 +21,7 @@ const secret32 = z.string().min(32).refine(notPlaceholder, 'looks like a placeho
 
 const schema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().min(1).max(65535).default(3000),
+  PORT: z.coerce.number().int().min(0).max(65535).default(3000),
 
   DATABASE_URL: z.string().min(1).refine(
     (v) => v.startsWith('postgres://') || v.startsWith('postgresql://'),
@@ -67,7 +67,7 @@ function buildSource() {
     return {
       NODE_ENV: 'test',
       PORT: '0',
-      DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/saukele_test?schema=public',
+      DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:1234@localhost:5432/saukele_test?schema=public',
       JWT_ACCESS_SECRET: process.env.JWT_ACCESS_SECRET || 'test-access-secret-must-be-at-least-32-characters-long',
       JWT_REFRESH_SECRET: process.env.JWT_REFRESH_SECRET || 'test-refresh-secret-must-be-at-least-32-characters-different',
       JWT_ACCESS_TTL: '15m',

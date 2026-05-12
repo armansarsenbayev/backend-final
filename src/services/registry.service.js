@@ -38,6 +38,8 @@ async function getRegistry({ id, requesterId, requesterRole }) {
   const r = await prisma.registry.findUnique({ where: { id } });
   if (!r) throw errors.NotFound('Registry');
 
+  // ADMIN sees everything. Host sees their own. Others must be public OR be
+  // a linked guest in this registry.
   if (requesterRole === 'ADMIN' || r.hostId === requesterId || r.isPublic) {
     return serializeRegistry(r);
   }
@@ -92,4 +94,26 @@ async function listRegistries({ requesterId, requesterRole, cursor, limit }) {
   return { data: rows.map(serializeRegistry), next_cursor: next };
 }
 
-module.exports = { createRegistry, getRegistry, listRegistries, serializeRegistry };
+module.exports = { createRegistry, getRegistry, listRegistries, updateRegistry, deleteRegistry, serializeRegistry };
+
+async function updateRegistry({ id, hostId, body }) {
+  const reg = await prisma.registry.findUnique({ where: { id } });
+  if (!reg) throw errors.NotFound('Registry');
+  if (reg.hostId !== hostId) throw errors.Forbidden('Only the registry host can update it');
+  const updated = await prisma.registry.update({
+    where: { id },
+    data: {
+      ...(body.title && { title: body.title }),
+      ...(body.event_date && { eventDate: body.event_date }),
+      ...(body.is_public !== undefined && { isPublic: body.is_public }),
+    },
+  });
+  return serializeRegistry(updated);
+}
+
+async function deleteRegistry({ id, hostId }) {
+  const reg = await prisma.registry.findUnique({ where: { id } });
+  if (!reg) throw errors.NotFound('Registry');
+  if (reg.hostId !== hostId) throw errors.Forbidden('Only the registry host can delete it');
+  await prisma.registry.delete({ where: { id } });
+}

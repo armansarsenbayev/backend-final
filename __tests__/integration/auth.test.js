@@ -4,6 +4,14 @@ const request = require('supertest');
 const { buildApp } = require('../../src/app');
 const { prisma, resetDatabase } = require('../helpers/factories');
 
+async function verifyEmailFor(email) {
+  const user = await prisma.user.findUnique({ where: { email } });
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { isEmailVerified: true, emailVerifyToken: null, emailVerifyExpires: null },
+  });
+}
+
 const app = buildApp();
 
 describe('Auth flow (integration)', () => {
@@ -24,6 +32,8 @@ describe('Auth flow (integration)', () => {
     expect(reg.status).toBe(201);
     expect(reg.body).toMatchObject({ email: 'aizhan@example.kz', role: 'HOST' });
     expect(reg.body.passwordHash).toBeUndefined();
+
+    await verifyEmailFor('aizhan@example.kz');
 
     const login = await request(app).post('/api/v1/auth/login').send({
       email: 'aizhan@example.kz',
@@ -87,6 +97,8 @@ describe('Auth flow (integration)', () => {
       password: 'StrongPass1!',
       role: 'GUEST',
     });
+    await verifyEmailFor('rot@example.com');
+
     const login = await request(app).post('/api/v1/auth/login').send({
       email: 'rot@example.com',
       password: 'StrongPass1!',
@@ -115,6 +127,8 @@ describe('Auth flow (integration)', () => {
       role: 'GUEST',
     });
     expect(reg.status).toBe(201);
+
+    await verifyEmailFor('lo@example.com');
 
     const login = await request(app).post('/api/v1/auth/login').send({
       email: 'lo@example.com',

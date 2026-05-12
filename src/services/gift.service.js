@@ -16,6 +16,8 @@ function serializeGift(g) {
     required_tier_rank: g.requiredTierRank,
     is_fragile: g.isFragile,
     state: g.state,
+    vendor_id: g.vendorId || null,
+    courier_id: g.courierId || null,
     created_at: g.createdAt,
   };
 }
@@ -105,4 +107,36 @@ async function listGiftsByRegistry({ registryId, requesterId, requesterRole, sta
   return { data: rows.map(serializeGift), next_cursor: next };
 }
 
-module.exports = { createGift, getGift, listGiftsByRegistry, serializeGift };
+async function updateGift({ id, registryId, hostId, body }) {
+  const reg = await prisma.registry.findUnique({ where: { id: registryId } });
+  if (!reg) throw errors.NotFound('Registry');
+  if (reg.hostId !== hostId) throw errors.Forbidden('Only the registry host can update gifts');
+  const gift = await prisma.gift.findUnique({ where: { id } });
+  if (!gift) throw errors.NotFound('Gift');
+  if (gift.registryId !== registryId) throw errors.NotFound('Gift');
+  if (!['PENDING'].includes(gift.state)) throw errors.Conflict('Only PENDING gifts can be updated', 'GIFT_NOT_EDITABLE');
+
+  const updated = await prisma.gift.update({
+    where: { id },
+    data: {
+      ...(body.title && { title: body.title }),
+      ...(body.description !== undefined && { description: body.description }),
+      ...(body.target_amount_kzt && { targetAmountKzt: new Prisma.Decimal(body.target_amount_kzt) }),
+      ...(body.required_tier_rank !== undefined && { requiredTierRank: body.required_tier_rank }),
+      ...(body.is_fragile !== undefined && { isFragile: body.is_fragile }),
+    },
+  });
+  return serializeGift(updated);
+}
+
+async function deleteGift({ id, registryId, hostId }) {
+  const reg = await prisma.registry.findUnique({ where: { id: registryId } });
+  if (!reg) throw errors.NotFound('Registry');
+  if (reg.hostId !== hostId) throw errors.Forbidden('Only the registry host can delete gifts');
+  const gift = await prisma.gift.findUnique({ where: { id } });
+  if (!gift) throw errors.NotFound('Gift');
+  if (!['PENDING', 'CANCELLED'].includes(gift.state)) throw errors.Conflict('Only PENDING or CANCELLED gifts can be deleted', 'GIFT_NOT_DELETABLE');
+  await prisma.gift.delete({ where: { id } });
+}
+
+module.exports = { createGift, getGift, listGiftsByRegistry, updateGift, deleteGift, serializeGift };
