@@ -1,14 +1,14 @@
 'use strict';
 
 const { env } = require('./config/env');
-const { buildApp } = require('./app');
+const { initApp } = require('./app');
 const { prisma, disconnect } = require('./lib/prisma');
 
 async function main() {
   // Validate DB connectivity at boot.
   await prisma.$connect();
 
-  const app = buildApp();
+  const app = await initApp();
   const server = app.listen(env.PORT, () => {
     // eslint-disable-next-line no-console
     console.log(
