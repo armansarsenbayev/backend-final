@@ -34,12 +34,38 @@ function getRedisConnection() {
   return null;
 }
 
+async function probeRedis(conn) {
+  const IORedis = require('ioredis');
+  const client = new IORedis({
+    ...conn,
+    lazyConnect: true,
+    enableOfflineQueue: false,
+    maxRetriesPerRequest: 0,
+    retryStrategy: () => null,
+    connectTimeout: 5000,
+  });
+  try {
+    await client.connect();
+    await client.ping();
+  } finally {
+    client.disconnect();
+  }
+}
+
 async function initQueue() {
   const conn = getRedisConnection();
   if (!conn) {
     console.log('[queue] No Redis configured — email will be sent synchronously');
     return;
   }
+
+  try {
+    await probeRedis(conn);
+  } catch (err) {
+    console.warn('[queue] Redis unavailable — email will be sent synchronously:', err.message);
+    return;
+  }
+
   try {
     ({ Queue, Worker } = require('bullmq'));
 
@@ -79,6 +105,8 @@ async function initQueue() {
 
     emailWorker.on('completed', (job) => console.log(`[queue] Email job ${job.id} completed`));
     emailWorker.on('failed', (job, err) => console.error(`[queue] Email job ${job.id} failed:`, err.message));
+    emailQueue.on('error', (err) => console.error('[queue] Queue error:', err.message));
+    emailWorker.on('error', (err) => console.error('[queue] Worker error:', err.message));
 
     console.log('[queue] BullMQ email queue initialized with Redis');
   } catch (err) {
