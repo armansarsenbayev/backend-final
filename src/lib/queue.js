@@ -12,21 +12,23 @@ const emailService = require('./email');
 let Queue, Worker, emailQueue, emailWorker;
 
 function getRedisConnection() {
-  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
-    // Upstash requires special connection for BullMQ
-    return {
-      host: new URL(env.UPSTASH_REDIS_REST_URL).hostname,
-      port: 6379,
-      password: env.UPSTASH_REDIS_REST_TOKEN,
-      tls: {},
-    };
-  }
   if (env.REDIS_URL) {
     const u = new URL(env.REDIS_URL);
     return {
       host: u.hostname,
       port: Number(u.port) || 6379,
-      password: u.password || undefined,
+      username: u.username || 'default',
+      password: decodeURIComponent(u.password || ''),
+      tls: env.REDIS_URL.startsWith('rediss://') ? {} : undefined,
+    };
+  }
+  if (env.UPSTASH_REDIS_REST_URL && env.UPSTASH_REDIS_REST_TOKEN) {
+    return {
+      host: new URL(env.UPSTASH_REDIS_REST_URL).hostname,
+      port: 6379,
+      username: 'default',
+      password: env.UPSTASH_REDIS_REST_TOKEN,
+      tls: {},
     };
   }
   return null;
