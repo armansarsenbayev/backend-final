@@ -1,55 +1,55 @@
 openapi: 3.0.3
 info:
-  title: Saukele Digital Registry API
-  version: 1.0.0
+  title: Saukele Digital Wedding Registry API
   description: |
-    REST API for **Saukele** — a digital wedding registry that models Kazakh
-    family-tree kinship, multi-currency pool funding with snapshotted exchange
-    rates, and traditional-gift logistics.
+    Production-grade backend for Kazakh wedding gift registries.
+    Features family tree kinship, multi-currency pool funding, and role-based logistics.
 
-    ## Conventions
-    - All timestamps are ISO-8601 UTC.
-    - All amounts are decimals serialized as JSON numbers; the canonical currency
-      is KZT. Foreign currencies are stored alongside the rate that was active at
-      transaction time and are NEVER recalculated.
-    - All endpoints (except `/auth/register`, `/auth/login`, `/auth/refresh`,
-      `/healthz`) require a valid JWT access token.
-    - Pagination on list endpoints is **cursor-based** (keyset). The cursor is
-      opaque to the client — pass back exactly what `next_cursor` returned.
-    - Errors follow a single shape (`ErrorResponse`).
+    ## Roles
+    - **HOST** — creates registries, gifts, guests; cancels gifts
+    - **GUEST** — makes contributions (tier-filtered), views gifts
+    - **VENDOR** — views FUNDED gifts, confirms purchase
+    - **COURIER** — views PURCHASED gifts, confirms delivery
+    - **ADMIN** — full access: user management, queue status
 
+    ## Gift State Machine
+    ```
+    PENDING → FUNDED (auto, when contributions reach target)
+    FUNDED  → PURCHASED (vendor confirms)
+    PURCHASED → DELIVERED (courier confirms)
+    PENDING/FUNDED → CANCELLED (host cancels)
+    ```
+
+    ## Authentication
+    All protected endpoints require `Authorization: Bearer <access_token>`.
+    Access tokens expire in 15 minutes. Use `/auth/refresh` to get a new pair.
+  version: 1.0.0
   contact:
-    name: Saukele Backend Team
+    name: Arman Sarsenbayev
+    url: https://github.com/armansarsenbayev/backend-final
 
 servers:
   - url: http://localhost:3000/api/v1
-    description: Local development
-  - url: https://api.saukele.kz/v1
-    description: Production
+    description: Local development server
 
 tags:
-  - name: Auth
-    description: Registration, login, logout, token refresh
-  - name: Users
-    description: Current-user profile
-  - name: Registries
-    description: Wedding/event registries owned by a Host
-  - name: Gifts
-    description: Pool-funded gifts inside a registry
-  - name: Guests
-    description: Family-tree members attached to a registry
-  - name: Contributions
-    description: Multi-currency pool contributions
-  - name: FamilyTree
-    description: Recursive kinship queries with gift-tier obligations
-  - name: Admin
-    description: Admin-only operations (RBAC = ADMIN)
-  - name: Health
-    description: Liveness / readiness probes
+  - name: health
+    description: Server liveness check
+  - name: auth
+    description: Authentication & authorization
+  - name: registries
+    description: Wedding registry management (HOST)
+  - name: gifts
+    description: Gift management (HOST) and contributions (GUEST)
+  - name: guests
+    description: Family tree guest management (HOST)
+  - name: vendor
+    description: Vendor purchase flow
+  - name: courier
+    description: Courier delivery flow
+  - name: admin
+    description: Platform administration (ADMIN only)
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Security
-# ─────────────────────────────────────────────────────────────────────────────
 components:
   securitySchemes:
     bearerAuth:
@@ -57,77 +57,121 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
-  parameters:
-    CursorParam:
-      name: cursor
-      in: query
-      required: false
-      description: Opaque keyset cursor returned by the previous page response.
-      schema:
-        type: string
-    LimitParam:
-      name: limit
-      in: query
-      required: false
-      schema:
-        type: integer
-        minimum: 1
-        maximum: 100
-        default: 20
-    RegistryIdPath:
-      name: registry_id
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    GiftIdPath:
-      name: gift_id
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-    GuestIdPath:
-      name: guest_id
-      in: path
-      required: true
-      schema:
-        type: string
-        format: uuid
-
   schemas:
-    # ── Common ────────────────────────────────────────────────────────────────
     ErrorResponse:
       type: object
       required: [error, code, status_code]
       properties:
         error:
           type: string
-          description: Human-readable summary.
-          example: "Validation failed"
+          example: "Resource not found"
         code:
           type: string
-          description: Stable machine-readable code (UPPER_SNAKE).
-          example: "VALIDATION_ERROR"
+          example: "NOT_FOUND"
         status_code:
           type: integer
-          example: 422
+          example: 404
         details:
           type: array
-          description: Field-level errors when applicable.
           items:
             type: object
             properties:
-              field: { type: string, example: "email" }
-              issue: { type: string, example: "must be a valid email" }
-        request_id:
-          type: string
-          example: "req_01HXYZ..."
+              field: { type: string }
+              issue: { type: string }
 
-    Pagination:
+    User:
       type: object
-      required: [data]
+      properties:
+        id: { type: string, format: uuid }
+        email: { type: string, format: email }
+        username: { type: string }
+        role:
+          type: string
+          enum: [HOST, GUEST, VENDOR, COURIER, ADMIN]
+        is_active: { type: boolean }
+        is_email_verified: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    TokenPair:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string }
+        token_type: { type: string, example: Bearer }
+        expires_in: { type: integer, example: 900 }
+
+    Registry:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        host_id: { type: string, format: uuid }
+        title: { type: string }
+        event_date: { type: string, format: date-time }
+        is_public: { type: boolean }
+        created_at: { type: string, format: date-time }
+
+    Gift:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        registry_id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        target_amount_kzt: { type: number, example: 450000 }
+        current_amount_kzt: { type: number, example: 51025 }
+        required_tier_rank: { type: integer, minimum: 0, maximum: 5 }
+        is_fragile: { type: boolean }
+        state:
+          type: string
+          enum: [PENDING, FUNDED, PURCHASED, DELIVERED, CANCELLED]
+        vendor_id: { type: string, format: uuid, nullable: true }
+        courier_id: { type: string, format: uuid, nullable: true }
+        created_at: { type: string, format: date-time }
+
+    Guest:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        registry_id: { type: string, format: uuid }
+        user_id: { type: string, format: uuid, nullable: true }
+        parent_id: { type: string, format: uuid, nullable: true }
+        display_name: { type: string }
+        kinship_label:
+          type: string
+          enum: [ata_ana, aga_apa, jien, kuda, dos, other]
+        tier_rank: { type: integer, minimum: 0, maximum: 5 }
+        created_at: { type: string, format: date-time }
+
+    FamilyTreeNode:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        parent_id: { type: string, format: uuid, nullable: true }
+        display_name: { type: string }
+        kinship_label: { type: string }
+        tier_rank: { type: integer }
+        depth: { type: integer }
+        suggested_kzt: { type: number, example: 100000 }
+        funded_kzt: { type: number, example: 51025 }
+
+    Contribution:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        gift_id: { type: string, format: uuid }
+        guest_id: { type: string, format: uuid }
+        amount_kzt: { type: number, example: 51025 }
+        amount_original: { type: number, example: 100 }
+        currency_original: { type: string, example: EUR }
+        exchange_rate: { type: number, example: 510.25 }
+        rate_locked_at: { type: string, format: date-time }
+        status:
+          type: string
+          enum: [PENDING, FUNDED, FAILED, REFUNDED]
+        created_at: { type: string, format: date-time }
+
+    PaginatedResponse:
+      type: object
       properties:
         data:
           type: array
@@ -135,630 +179,823 @@ components:
         next_cursor:
           type: string
           nullable: true
-          description: Pass to `?cursor=` for the next page. `null` = last page.
+          description: Base64url cursor for next page. Null if this is the last page.
 
-    Role:
-      type: string
-      enum: [HOST, GUEST, VENDOR, COURIER, ADMIN]
-
-    # ── Auth ──────────────────────────────────────────────────────────────────
-    RegisterRequest:
-      type: object
-      required: [email, username, password, role]
-      properties:
-        email:    { type: string, format: email, example: "aizhan@example.kz" }
-        username: { type: string, minLength: 3, maxLength: 32, example: "aizhan" }
-        password:
-          type: string
-          minLength: 10
-          description: Min 10 chars, must contain at least one letter and one digit.
-          example: "Saukele2025!"
-        role:
-          $ref: '#/components/schemas/Role'
-          description: ADMIN cannot self-register.
-
-    LoginRequest:
-      type: object
-      required: [email, password]
-      properties:
-        email:    { type: string, format: email }
-        password: { type: string }
-
-    TokenPair:
-      type: object
-      required: [access_token, refresh_token, token_type, expires_in]
-      properties:
-        access_token:  { type: string, example: "eyJhbGciOi..." }
-        refresh_token: { type: string, example: "eyJhbGciOi..." }
-        token_type:    { type: string, example: "Bearer" }
-        expires_in:    { type: integer, description: "access TTL in seconds", example: 900 }
-
-    RefreshRequest:
-      type: object
-      required: [refresh_token]
-      properties:
-        refresh_token: { type: string }
-
-    User:
-      type: object
-      properties:
-        id:        { type: string, format: uuid }
-        email:     { type: string, format: email }
-        username:  { type: string }
-        role:      { $ref: '#/components/schemas/Role' }
-        is_active: { type: boolean }
-        created_at: { type: string, format: date-time }
-
-    # ── Registry ──────────────────────────────────────────────────────────────
-    Registry:
-      type: object
-      properties:
-        id:         { type: string, format: uuid }
-        host_id:    { type: string, format: uuid }
-        title:      { type: string, example: "Aizhan & Daulet — Үйлену тойы" }
-        event_date: { type: string, format: date-time }
-        is_public:  { type: boolean }
-        created_at: { type: string, format: date-time }
-
-    RegistryCreate:
-      type: object
-      required: [title, event_date]
-      properties:
-        title:      { type: string, minLength: 3, maxLength: 120 }
-        event_date: { type: string, format: date-time }
-        is_public:  { type: boolean, default: true }
-
-    # ── Gift ──────────────────────────────────────────────────────────────────
-    GiftState:
-      type: string
-      enum: [PENDING, FUNDED, PURCHASED, DELIVERED, CANCELLED]
-
-    Gift:
-      type: object
-      properties:
-        id:                  { type: string, format: uuid }
-        registry_id:         { type: string, format: uuid }
-        title:               { type: string, example: "Сәукеле (traditional headpiece)" }
-        description:         { type: string, nullable: true }
-        target_amount_kzt:   { type: number, example: 450000 }
-        current_amount_kzt:  { type: number, example: 120000 }
-        required_tier_rank:  { type: integer, example: 1 }
-        is_fragile:          { type: boolean }
-        state:               { $ref: '#/components/schemas/GiftState' }
-        created_at:          { type: string, format: date-time }
-
-    GiftCreate:
-      type: object
-      required: [title, target_amount_kzt]
-      properties:
-        title:               { type: string, minLength: 2, maxLength: 120 }
-        description:         { type: string, maxLength: 2000 }
-        target_amount_kzt:   { type: number, minimum: 1000 }
-        required_tier_rank:  { type: integer, minimum: 0, maximum: 5, default: 0 }
-        is_fragile:          { type: boolean, default: false }
-
-    # ── Guest ─────────────────────────────────────────────────────────────────
-    Guest:
-      type: object
-      properties:
-        id:            { type: string, format: uuid }
-        registry_id:   { type: string, format: uuid }
-        parent_id:     { type: string, format: uuid, nullable: true }
-        user_id:       { type: string, format: uuid, nullable: true }
-        display_name:  { type: string }
-        kinship_label: { type: string, example: "ata_ana" }
-        tier_rank:     { type: integer, example: 0 }
-        created_at:    { type: string, format: date-time }
-
-    GuestCreate:
-      type: object
-      required: [display_name, kinship_label, tier_rank]
-      properties:
-        parent_id:
-          type: string
-          format: uuid
-          nullable: true
-          description: Set null for root of the family tree.
-        user_id:
-          type: string
-          format: uuid
-          nullable: true
-          description: Optional link to an existing User.
-        display_name:  { type: string, minLength: 1, maxLength: 120 }
-        kinship_label:
-          type: string
-          enum: [ata_ana, aga_apa, jien, kuda, dos, other]
-        tier_rank:     { type: integer, minimum: 0, maximum: 5 }
-
-    FamilyTreeNode:
-      type: object
-      description: One node in the recursive family-tree response.
-      properties:
-        id:            { type: string, format: uuid }
-        parent_id:     { type: string, format: uuid, nullable: true }
-        display_name:  { type: string }
-        kinship_label: { type: string }
-        tier_rank:     { type: integer }
-        depth:         { type: integer, description: "0 = requested root" }
-        suggested_kzt: { type: number, description: "tier obligation amount" }
-        funded_kzt:    { type: number, description: "already contributed by this guest" }
-
-    # ── Contribution ──────────────────────────────────────────────────────────
-    ContributionStatus:
-      type: string
-      enum: [PENDING, FUNDED, FAILED, REFUNDED]
-
-    Contribution:
-      type: object
-      properties:
-        id:                  { type: string, format: uuid }
-        gift_id:             { type: string, format: uuid }
-        guest_id:            { type: string, format: uuid }
-        amount_kzt:          { type: number, example: 45000.00 }
-        amount_original:     { type: number, example: 100.00 }
-        currency_original:   { type: string, example: "EUR" }
-        exchange_rate:       { type: number, example: 450.000000 }
-        rate_locked_at:      { type: string, format: date-time }
-        status:              { $ref: '#/components/schemas/ContributionStatus' }
-        created_at:          { type: string, format: date-time }
-
-    ContributionCreate:
-      type: object
-      required: [guest_id, amount_original, currency_original]
-      properties:
-        guest_id:          { type: string, format: uuid }
-        amount_original:   { type: number, minimum: 0.01 }
-        currency_original:
-          type: string
-          minLength: 3
-          maxLength: 3
-          example: "EUR"
-          description: ISO 4217 code. Must be supported by the exchange provider.
-
-  # ── Reusable error responses ────────────────────────────────────────────────
-  responses:
-    BadRequest:
-      description: Malformed request.
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-    Unauthorized:
-      description: Missing or invalid access token.
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-    Forbidden:
-      description: Authenticated, but role or tier does not permit this action.
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-    NotFound:
-      description: Resource does not exist.
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-    Conflict:
-      description: State conflict (e.g., gift already funded, race condition).
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-    Unprocessable:
-      description: Validation passed type-wise, but business rule rejected the request.
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-    TooManyRequests:
-      description: Rate limit exceeded.
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-    InternalError:
-      description: Unexpected server error.
-      content:
-        application/json:
-          schema: { $ref: '#/components/schemas/ErrorResponse' }
-
-security:
-  - bearerAuth: []
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Paths
-# ─────────────────────────────────────────────────────────────────────────────
 paths:
 
   # ── Health ─────────────────────────────────────────────────────────────────
   /healthz:
     get:
-      tags: [Health]
-      summary: Liveness probe
+      tags: [health]
+      summary: Server liveness check
+      description: No authentication required. Returns server status and uptime.
       security: []
       responses:
         '200':
-          description: Service is up.
+          description: Server is healthy
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  status: { type: string, example: "ok" }
-                  uptime_s: { type: number, example: 1234 }
+                  status: { type: string, example: ok }
+                  uptime_s: { type: integer, example: 3600 }
 
   # ── Auth ───────────────────────────────────────────────────────────────────
   /auth/register:
     post:
-      tags: [Auth]
+      tags: [auth]
       summary: Register a new user
       description: |
-        Creates a new user with the requested role (ADMIN is rejected).
-        Rate-limited to 5 attempts per minute per IP.
+        Creates a new account and sends a verification email.
+        The user must click the verification link before they can log in.
+        ADMIN role cannot be self-assigned — the endpoint returns 422.
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RegisterRequest' }
-            examples:
-              host:
-                value:
-                  email: "aizhan@example.kz"
-                  username: "aizhan"
-                  password: "Saukele2025!"
-                  role: "HOST"
+            schema:
+              type: object
+              required: [email, username, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: host@saukele.kz
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 32
+                  example: host_user
+                password:
+                  type: string
+                  minLength: 10
+                  description: Must contain at least one letter and one digit
+                  example: Saukele2025!
+                role:
+                  type: string
+                  enum: [HOST, GUEST, VENDOR, COURIER]
+                  default: GUEST
+                  example: HOST
       responses:
         '201':
-          description: User created.
+          description: User created. Verification email sent.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/User' }
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/User'
+                  - type: object
+                    properties:
+                      message: { type: string, example: "Registration successful. Please check your email." }
         '409':
-          description: Email or username already taken.
+          description: Email or username already taken
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
-        '422': { $ref: '#/components/responses/Unprocessable' }
-        '429': { $ref: '#/components/responses/TooManyRequests' }
-        '500': { $ref: '#/components/responses/InternalError' }
+              examples:
+                email_taken:
+                  value: { error: "Email is already registered", code: EMAIL_TAKEN, status_code: 409 }
+                username_taken:
+                  value: { error: "Username is already taken", code: USERNAME_TAKEN, status_code: 409 }
+        '422':
+          description: Validation error (weak password, invalid email, ADMIN role attempt)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/verify-email:
+    get:
+      tags: [auth]
+      summary: Verify email address
+      description: Activates the account. Token comes from the verification email link (valid 24h).
+      security: []
+      parameters:
+        - name: token
+          in: query
+          required: true
+          schema: { type: string }
+          example: "a1b2c3d4e5f6..."
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Email verified successfully. You can now log in." }
+        '422':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/resend-verification:
+    post:
+      tags: [auth]
+      summary: Resend verification email
+      description: Sends a new verification link. Returns 200 even if email not found (prevents enumeration).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email, example: host@saukele.kz }
+      responses:
+        '200':
+          description: Email sent (or silently ignored if not found)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
 
   /auth/login:
     post:
-      tags: [Auth]
-      summary: Log in and receive an access + refresh token pair
-      description: Rate-limited to 5 attempts per minute per IP.
+      tags: [auth]
+      summary: Login and get tokens
+      description: |
+        Verifies credentials and issues JWT access + refresh token pair.
+        Returns 403 if email is not verified.
+        Returns 401 if credentials are wrong.
       security: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/LoginRequest' }
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, example: host@saukele.kz }
+                password: { type: string, example: Saukele2025! }
       responses:
         '200':
-          description: Token pair issued.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/TokenPair' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '422': { $ref: '#/components/responses/Unprocessable' }
-        '429': { $ref: '#/components/responses/TooManyRequests' }
-
-  /auth/refresh:
-    post:
-      tags: [Auth]
-      summary: Exchange a refresh token for a new access token
-      security: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/RefreshRequest' }
-      responses:
-        '200':
-          description: New token pair (refresh rotated).
+          description: Login successful
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TokenPair' }
         '401':
-          description: Refresh token invalid, expired, or revoked.
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error: "Invalid credentials", code: INVALID_CREDENTIALS, status_code: 401 }
+        '403':
+          description: Email not verified
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh access token
+      description: |
+        Exchanges a valid refresh token for a new access + refresh token pair.
+        **Token rotation:** the old refresh token is immediately revoked.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
+      responses:
+        '200':
+          description: New token pair issued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenPair' }
+        '401':
+          description: Invalid or revoked refresh token
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /auth/logout:
     post:
-      tags: [Auth]
-      summary: Revoke the caller's refresh token
-      description: |
-        Marks the refresh token as revoked in the database AND adds it to the
-        Redis denylist for instant invalidation.
+      tags: [auth]
+      summary: Logout and revoke refresh token
+      description: Marks the refresh token as revoked in the database. The token cannot be used again.
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RefreshRequest' }
+            schema:
+              type: object
+              required: [refresh_token]
+              properties:
+                refresh_token: { type: string }
       responses:
-        '204': { description: "Logged out." }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '204':
+          description: Logged out successfully (empty body)
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   /auth/me:
     get:
-      tags: [Users]
-      summary: Get the authenticated user's profile
+      tags: [auth]
+      summary: Get current user profile
+      security:
+        - bearerAuth: []
       responses:
         '200':
-          description: Current user.
+          description: Current user
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '401':
+          description: Not authenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /auth/forgot-password:
+    post:
+      tags: [auth]
+      summary: Request password reset email
+      description: Sends reset link to the email. Returns same message regardless of whether email exists (prevents enumeration).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email: { type: string, format: email, example: host@saukele.kz }
+      responses:
+        '200':
+          description: Reset email sent (or silently ignored)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "If this email exists, a reset link has been sent." }
+
+  /auth/reset-password:
+    post:
+      tags: [auth]
+      summary: Reset password using token from email
+      description: |
+        Resets the password. Token is valid for 1 hour.
+        All existing refresh tokens are revoked on success.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token, password]
+              properties:
+                token: { type: string }
+                password: { type: string, minLength: 10, example: NewSaukele2025! }
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+        '422':
+          description: Invalid or expired token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
 
   # ── Registries ─────────────────────────────────────────────────────────────
   /registries:
     post:
-      tags: [Registries]
-      summary: Create a new registry (HOST only)
-      description: RBAC — only role HOST. Other roles receive 403.
+      tags: [registries]
+      summary: Create registry (HOST)
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/RegistryCreate' }
+            schema:
+              type: object
+              required: [title, event_date]
+              properties:
+                title: { type: string, minLength: 3, maxLength: 120, example: "Aizhan & Daulet Wedding" }
+                event_date: { type: string, format: date-time, example: "2025-12-31T18:00:00Z" }
+                is_public: { type: boolean, default: true }
       responses:
         '201':
-          description: Registry created.
+          description: Registry created
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Registry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '422': { $ref: '#/components/responses/Unprocessable' }
+        '401': { description: Not authenticated, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+        '403': { description: Not HOST role, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
 
     get:
-      tags: [Registries]
-      summary: List registries visible to the caller (cursor-paginated)
+      tags: [registries]
+      summary: List registries (cursor paginated)
+      description: HOST sees own registries. ADMIN sees all. GUEST sees public ones and those they're invited to.
+      security:
+        - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/CursorParam'
-        - $ref: '#/components/parameters/LimitParam'
+        - name: cursor
+          in: query
+          schema: { type: string }
+          description: Pagination cursor from previous response
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
       responses:
         '200':
-          description: Page of registries.
+          description: Paginated registry list
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Pagination'
+                  - $ref: '#/components/schemas/PaginatedResponse'
                   - type: object
                     properties:
                       data:
                         type: array
                         items: { $ref: '#/components/schemas/Registry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
 
   /registries/{registry_id}:
     parameters:
-      - $ref: '#/components/parameters/RegistryIdPath'
+      - name: registry_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
     get:
-      tags: [Registries]
-      summary: Get a single registry
+      tags: [registries]
+      summary: Get registry by ID
+      security:
+        - bearerAuth: []
       responses:
         '200':
-          description: Registry details.
+          description: Registry details
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Registry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '404': { description: Not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    patch:
+      tags: [registries]
+      summary: Update registry (HOST only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                event_date: { type: string, format: date-time }
+                is_public: { type: boolean }
+      responses:
+        '200':
+          description: Updated registry
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Registry' }
+        '403': { description: Not the registry host, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+    delete:
+      tags: [registries]
+      summary: Delete registry (HOST only)
+      description: Cascades to gifts, guests, and contributions.
+      security:
+        - bearerAuth: []
+      responses:
+        '204': { description: Deleted successfully }
+        '403': { description: Not the registry host, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
 
   # ── Gifts ──────────────────────────────────────────────────────────────────
   /registries/{registry_id}/gifts:
     parameters:
-      - $ref: '#/components/parameters/RegistryIdPath'
+      - name: registry_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
     post:
-      tags: [Gifts]
-      summary: Add a gift to a registry (HOST only, must own the registry)
+      tags: [gifts]
+      summary: Add gift to registry (HOST)
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/GiftCreate' }
+            schema:
+              type: object
+              required: [title, target_amount_kzt]
+              properties:
+                title: { type: string, example: "Сәукеле (traditional headpiece)" }
+                description: { type: string }
+                target_amount_kzt: { type: number, minimum: 1000, example: 450000 }
+                required_tier_rank: { type: integer, minimum: 0, maximum: 5, default: 0 }
+                is_fragile: { type: boolean, default: false }
       responses:
         '201':
-          description: Gift created.
+          description: Gift created
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Gift' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/Unprocessable' }
-
     get:
-      tags: [Gifts]
-      summary: List gifts in a registry (cursor-paginated, kinship-filtered)
+      tags: [gifts]
+      summary: List gifts in registry (tier-filtered)
       description: |
-        Results are filtered by the caller's tier rank. A guest with tier_rank=2
-        will not see gifts whose required_tier_rank=0.
+        HOST sees all gifts. GUEST sees only gifts where `required_tier_rank >= guest.tier_rank`.
+      security:
+        - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/CursorParam'
-        - $ref: '#/components/parameters/LimitParam'
         - name: state
           in: query
-          schema: { $ref: '#/components/schemas/GiftState' }
+          schema: { type: string, enum: [PENDING, FUNDED, PURCHASED, DELIVERED, CANCELLED] }
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
       responses:
         '200':
-          description: Page of gifts.
+          description: Paginated gift list
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Pagination'
+                  - $ref: '#/components/schemas/PaginatedResponse'
                   - type: object
                     properties:
                       data:
                         type: array
                         items: { $ref: '#/components/schemas/Gift' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
 
-  /gifts/{gift_id}:
+  /registries/{registry_id}/gifts/{gift_id}:
     parameters:
-      - $ref: '#/components/parameters/GiftIdPath'
-    get:
-      tags: [Gifts]
-      summary: Get a single gift
+      - name: registry_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: gift_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [gifts]
+      summary: Update gift (HOST, PENDING state only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string }
+                description: { type: string }
+                target_amount_kzt: { type: number }
+                required_tier_rank: { type: integer }
+                is_fragile: { type: boolean }
       responses:
         '200':
-          description: Gift details.
+          description: Updated gift
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Gift' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Gift is not in PENDING state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+    delete:
+      tags: [gifts]
+      summary: Delete gift (HOST, PENDING or CANCELLED only)
+      security:
+        - bearerAuth: []
+      responses:
+        '204': { description: Deleted }
+        '409': { description: Gift cannot be deleted in current state, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
 
-  # ── Contributions (the core business transaction) ─────────────────────────
-  /gifts/{gift_id}/contributions:
+  /gifts/{gift_id}:
     parameters:
-      - $ref: '#/components/parameters/GiftIdPath'
-
+      - name: gift_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
     get:
-      tags: [Contributions]
-      summary: List contributions for a gift (cursor-paginated)
-      description: |
-        Returns contributions to a pooled gift using cursor pagination keyed on
-        `created_at` for deterministic ordering.
-      parameters:
-        - $ref: '#/components/parameters/CursorParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - name: status
-          in: query
-          schema: { $ref: '#/components/schemas/ContributionStatus' }
+      tags: [gifts]
+      summary: Get gift by ID
+      security:
+        - bearerAuth: []
       responses:
         '200':
-          description: Page of contributions.
+          description: Gift details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Gift' }
+        '404': { description: Gift not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /gifts/{gift_id}/cancel:
+    parameters:
+      - name: gift_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [gifts]
+      summary: Cancel gift (HOST)
+      description: |
+        Transitions gift from PENDING or FUNDED to CANCELLED.
+        All FUNDED contributions are marked as REFUNDED.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Gift cancelled
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Gift' }
+        '409':
+          description: Gift cannot be cancelled in current state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /gifts/{gift_id}/contributions:
+    parameters:
+      - name: gift_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    post:
+      tags: [gifts]
+      summary: Make a contribution (atomic, multi-currency)
+      description: |
+        **Core business transaction.** Runs inside a Serializable PostgreSQL transaction.
+
+        - Exchange rate is fetched before the transaction and locked at `rate_locked_at`
+        - `amount_kzt = amount_original × exchange_rate` — never recalculated
+        - Prevents overfunding via SELECT FOR UPDATE + CHECK constraint
+        - Guest's `tier_rank` must be ≤ gift's `required_tier_rank`
+        - When `current_amount_kzt` reaches `target_amount_kzt` → gift state becomes FUNDED
+        - FUNDED event triggers email to registry host
+
+        **Supported currencies:** KZT, USD, EUR, RUB, GBP, CNY, TRY
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [guest_id, amount_original, currency_original]
+              properties:
+                guest_id:
+                  type: string
+                  format: uuid
+                  description: ID of the Guest record (family tree node), not the User ID
+                amount_original:
+                  type: number
+                  minimum: 0.01
+                  example: 100.00
+                currency_original:
+                  type: string
+                  minLength: 3
+                  maxLength: 3
+                  example: EUR
+      responses:
+        '201':
+          description: Contribution recorded
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Contribution' }
+              example:
+                id: "uuid"
+                gift_id: "uuid"
+                guest_id: "uuid"
+                amount_kzt: 51025
+                amount_original: 100
+                currency_original: EUR
+                exchange_rate: 510.25
+                rate_locked_at: "2025-12-31T18:00:00.000Z"
+                status: FUNDED
+                created_at: "2025-12-31T18:00:00.000Z"
+        '403':
+          description: Guest tier rank insufficient for this gift
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error: "Guest tier rank (2) is insufficient", code: FORBIDDEN, status_code: 403 }
+        '409':
+          description: Gift is not accepting contributions (state != PENDING)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error: "Gift is not accepting contributions", code: GIFT_NOT_OPEN, status_code: 409 }
+        '422':
+          description: Overfunding attempt or unsupported currency
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              examples:
+                pool_cap:
+                  value: { error: "Contribution would exceed the gift target amount", code: POOL_CAP_EXCEEDED, status_code: 422 }
+                bad_currency:
+                  value: { error: 'Currency "XYZ" is not supported', code: UNSUPPORTED_CURRENCY, status_code: 422 }
+
+    get:
+      tags: [gifts]
+      summary: List contributions for a gift (cursor paginated)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string, enum: [PENDING, FUNDED, FAILED, REFUNDED] }
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Paginated contribution list
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Pagination'
+                  - $ref: '#/components/schemas/PaginatedResponse'
                   - type: object
                     properties:
                       data:
                         type: array
                         items: { $ref: '#/components/schemas/Contribution' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/InternalError' }
 
-    post:
-      tags: [Contributions]
-      summary: Contribute to a gift pool (atomic, multi-currency snapshot)
-      description: |
-        Runs inside a Serializable Postgres transaction with `SELECT … FOR UPDATE`.
-        The exchange rate is fetched and **snapshotted** into the row at write
-        time and is never recalculated.
-
-        **Failure modes:**
-        - `409 GIFT_NOT_OPEN` — gift is not in PENDING state.
-        - `422 POOL_CAP_EXCEEDED` — would overfund the gift.
-        - `422 UNSUPPORTED_CURRENCY` — exchange provider does not support the code.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/ContributionCreate' }
-            examples:
-              eur:
-                value:
-                  guest_id: "d290f1ee-6c54-4b01-90e6-d701748f0851"
-                  amount_original: 100.00
-                  currency_original: "EUR"
-      responses:
-        '201':
-          description: Contribution recorded.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Contribution' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/Unprocessable' }
-        '500': { $ref: '#/components/responses/InternalError' }
-
-  # ── Guests & Family Tree ──────────────────────────────────────────────────
+  # ── Guests ─────────────────────────────────────────────────────────────────
   /registries/{registry_id}/guests:
     parameters:
-      - $ref: '#/components/parameters/RegistryIdPath'
+      - name: registry_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
     post:
-      tags: [Guests]
-      summary: Add a guest to a registry's family tree
+      tags: [guests]
+      summary: Add guest to family tree (HOST)
       description: |
-        If `parent_id` is provided, it must belong to the same registry —
-        enforced by both application logic and a database CHECK constraint.
+        Creates a node in the self-referential family tree.
+        If `parent_id` is null, this becomes the root node.
+        `user_id` links the tree node to a registered User account.
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/GuestCreate' }
+            schema:
+              type: object
+              required: [display_name, kinship_label, tier_rank]
+              properties:
+                display_name: { type: string, example: "Ата (Father of Bride)" }
+                kinship_label:
+                  type: string
+                  enum: [ata_ana, aga_apa, jien, kuda, dos, other]
+                tier_rank:
+                  type: integer
+                  minimum: 0
+                  maximum: 5
+                  description: "0 = closest family (100k KZT obligation), 5 = distant"
+                parent_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Parent node ID. Null for root.
+                user_id:
+                  type: string
+                  format: uuid
+                  nullable: true
+                  description: Links this tree node to a registered user account
       responses:
         '201':
-          description: Guest created.
+          description: Guest added to tree
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Guest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/Unprocessable' }
-
     get:
-      tags: [Guests]
-      summary: List guests in a registry (flat, cursor-paginated)
+      tags: [guests]
+      summary: List guests in registry (cursor paginated)
+      security:
+        - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/CursorParam'
-        - $ref: '#/components/parameters/LimitParam'
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
       responses:
         '200':
-          description: Page of guests.
+          description: Paginated guest list
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Pagination'
+                  - $ref: '#/components/schemas/PaginatedResponse'
                   - type: object
                     properties:
                       data:
                         type: array
                         items: { $ref: '#/components/schemas/Guest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
+
+  /registries/{registry_id}/guests/{guest_id}:
+    parameters:
+      - name: registry_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+      - name: guest_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [guests]
+      summary: Update guest (HOST)
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                display_name: { type: string }
+                kinship_label: { type: string, enum: [ata_ana, aga_apa, jien, kuda, dos, other] }
+                tier_rank: { type: integer, minimum: 0, maximum: 5 }
+                parent_id: { type: string, format: uuid, nullable: true }
+                user_id: { type: string, format: uuid, nullable: true }
+      responses:
+        '200':
+          description: Updated guest
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Guest' }
+    delete:
+      tags: [guests]
+      summary: Delete guest (HOST)
+      description: Children are unlinked (parent_id set to null), not deleted.
+      security:
+        - bearerAuth: []
+      responses:
+        '204': { description: Deleted }
 
   /guests/{guest_id}/family-tree:
     parameters:
-      - $ref: '#/components/parameters/GuestIdPath'
+      - name: guest_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
     get:
-      tags: [FamilyTree]
-      summary: Recursive family-tree subtree with gift-tier obligations
+      tags: [guests]
+      summary: "⭐ Get recursive family tree (WITH RECURSIVE CTE)"
       description: |
-        **Assignment-mandated recursive endpoint.** Implemented via PostgreSQL
-        `WITH RECURSIVE` over the self-referential `guests.parent_id` column.
-        Each node carries:
-          - `depth` (0 at the requested root),
-          - `suggested_kzt` — the per-tier obligation amount,
-          - `funded_kzt`   — what this guest has already contributed.
+        Executes a single `WITH RECURSIVE` PostgreSQL CTE to traverse the
+        self-referential `guests.parentId` column to arbitrary depth.
 
-        Cycle-guarded and depth-capped at 10.
+        Each node returns:
+        - `depth` — distance from the requested root (0 = root itself)
+        - `suggested_kzt` — tier obligation: tier 0=100k, 1=50k, 2=20k, 3+=10k
+        - `funded_kzt` — total FUNDED contributions by this guest
+        - Cycle protection via ARRAY path tracking
+      security:
+        - bearerAuth: []
       parameters:
         - name: max_depth
           in: query
-          required: false
           schema: { type: integer, minimum: 1, maximum: 10, default: 10 }
       responses:
         '200':
-          description: Flat list of nodes (DFS order, depth ascending).
+          description: Family tree
           content:
             application/json:
               schema:
@@ -768,34 +1005,261 @@ paths:
                   nodes:
                     type: array
                     items: { $ref: '#/components/schemas/FamilyTreeNode' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+              example:
+                root_id: "uuid-ata"
+                nodes:
+                  - id: "uuid-ata"
+                    parent_id: null
+                    display_name: "Ата (Father)"
+                    kinship_label: ata_ana
+                    tier_rank: 0
+                    depth: 0
+                    suggested_kzt: 100000
+                    funded_kzt: 51025
+                  - id: "uuid-aga"
+                    parent_id: "uuid-ata"
+                    display_name: "Аға (Brother)"
+                    kinship_label: aga_apa
+                    tier_rank: 1
+                    depth: 1
+                    suggested_kzt: 50000
+                    funded_kzt: 0
+        '404': { description: Guest not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
 
-  # ── Admin ──────────────────────────────────────────────────────────────────
-  /admin/users:
+  # ── Vendor ─────────────────────────────────────────────────────────────────
+  /vendor/gifts:
     get:
-      tags: [Admin]
-      summary: List all users (ADMIN only)
-      description: RBAC test surface — non-admin tokens MUST receive 403.
+      tags: [vendor]
+      summary: List FUNDED gifts available to purchase (VENDOR)
+      description: Returns all gifts in FUNDED state. Only accessible by VENDOR or ADMIN.
+      security:
+        - bearerAuth: []
       parameters:
-        - $ref: '#/components/parameters/CursorParam'
-        - $ref: '#/components/parameters/LimitParam'
-        - name: role
+        - name: cursor
           in: query
-          schema: { $ref: '#/components/schemas/Role' }
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
       responses:
         '200':
-          description: Page of users.
+          description: Paginated list of FUNDED gifts
           content:
             application/json:
               schema:
                 allOf:
-                  - $ref: '#/components/schemas/Pagination'
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Gift' }
+        '403': { description: Not VENDOR role, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /vendor/gifts/{gift_id}/purchase:
+    parameters:
+      - name: gift_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [vendor]
+      summary: Confirm gift purchase (VENDOR) — FUNDED → PURCHASED
+      description: |
+        Transitions gift from FUNDED to PURCHASED.
+        Sets `vendor_id` to the authenticated vendor's user ID.
+        Triggers `gift_purchased` email notification to the registry host.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Gift marked as PURCHASED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Gift' }
+        '409':
+          description: Gift is not in FUNDED state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example: { error: "Gift must be in FUNDED state to purchase", code: GIFT_NOT_FUNDED, status_code: 409 }
+
+  /vendor/gifts/my:
+    get:
+      tags: [vendor]
+      summary: List gifts assigned to this vendor (VENDOR)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Gifts assigned to this vendor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Gift' }
+                  count: { type: integer }
+
+  # ── Courier ────────────────────────────────────────────────────────────────
+  /courier/gifts:
+    get:
+      tags: [courier]
+      summary: List PURCHASED gifts ready for delivery (COURIER)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Paginated list of PURCHASED gifts
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/Gift' }
+        '403': { description: Not COURIER role, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /courier/gifts/{gift_id}/deliver:
+    parameters:
+      - name: gift_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [courier]
+      summary: Confirm delivery (COURIER) — PURCHASED → DELIVERED
+      description: |
+        Transitions gift from PURCHASED to DELIVERED.
+        Sets `courier_id` to the authenticated courier's user ID.
+        Triggers `gift_delivered` email notification to the registry host.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Gift marked as DELIVERED
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Gift' }
+        '409':
+          description: Gift is not in PURCHASED state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /courier/gifts/my:
+    get:
+      tags: [courier]
+      summary: List deliveries assigned to this courier (COURIER)
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Deliveries by this courier
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Gift' }
+                  count: { type: integer }
+
+  # ── Admin ──────────────────────────────────────────────────────────────────
+  /admin/users:
+    get:
+      tags: [admin]
+      summary: List all users (ADMIN)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: role
+          in: query
+          schema: { type: string, enum: [HOST, GUEST, VENDOR, COURIER, ADMIN] }
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20 }
+      responses:
+        '200':
+          description: Paginated user list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
                   - type: object
                     properties:
                       data:
                         type: array
                         items: { $ref: '#/components/schemas/User' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+        '403': { description: Not ADMIN role, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /admin/users/{user_id}/activate:
+    parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+    patch:
+      tags: [admin]
+      summary: Activate or deactivate user (ADMIN)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [isActive]
+              properties:
+                isActive: { type: boolean }
+      responses:
+        '200':
+          description: Updated user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '404': { description: User not found, content: { application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } } } }
+
+  /admin/queue-status:
+    get:
+      tags: [admin]
+      summary: Get BullMQ email queue status (ADMIN)
+      description: Shows waiting, active, completed, and failed job counts. Returns synchronous fallback mode if Redis is not configured.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Queue statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [redis_connected, no_redis]
+                  mode:
+                    type: string
+                    example: synchronous_fallback
+                  waiting: { type: integer }
+                  active: { type: integer }
+                  completed: { type: integer }
+                  failed: { type: integer }

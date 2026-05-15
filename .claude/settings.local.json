@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Get-Content \"C:\\\\Users\\\\sabal\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Study-BackEnd-Final\\\\03a4cb4e-67f1-452b-8781-a8d07ef8a423\\\\tasks\\\\bluiz7p7o.output\" -Wait -Tail 20)",
+      "PowerShell($env:PGPASSWORD = \"1234\"; & \"C:\\\\Program Files\\\\PostgreSQL\\\\16\\\\bin\\\\psql.exe\" -U postgres -h localhost -p 5432 -c \"SELECT version\\(\\)\" 2>&1 | Out-String)"
+    ]
+  }
+}
