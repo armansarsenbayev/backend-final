@@ -1,0 +1,14 @@
+# Deployed URL — Saukele Wedding Registry
+
+## Backend API
+URL: (будет добавлено после деплоя)
+
+## Frontend
+URL: (будет добавлено после деплоя)
+
+## Swagger UI
+URL: (backend_url)/docs
+
+---
+Deployed on: (дата деплоя)
+Platform: Render / Railway / DeployRocks

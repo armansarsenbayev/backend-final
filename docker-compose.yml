@@ -1,0 +1,82 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL ───────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: saukele_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: saukele
+      POSTGRES_PASSWORD: saukele_pass
+      POSTGRES_DB: saukele_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U saukele -d saukele_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ────────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: saukele_redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ── Backend (Node.js + Express + Prisma) ────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: saukele_backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATABASE_URL: postgresql://saukele:saukele_pass@postgres:5432/saukele_db
+      REDIS_URL: redis://redis:6379
+      # JWT — replace with your own 64-char random strings in production
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dd699c3d98ad16dd5270f4fb82b2ca16a67db5fa99b5d47386baf1e5ca34c1b2}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-073157af0597e7e3417a9dd4ea7e75b1c1f2b387cf5bcd198a0bcc8ab17e2922}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-12}
+      CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS:-900000}
+      RATE_LIMIT_MAX: ${RATE_LIMIT_MAX:-10000}
+      EXCHANGE_PROVIDER: ${EXCHANGE_PROVIDER:-mock}
+      RESEND_API_KEY: ${RESEND_API_KEY:-re_placeholder}
+      EMAIL_FROM: ${EMAIL_FROM:-Saukele <onboarding@resend.dev>}
+      APP_URL: ${APP_URL:-http://localhost:3000}
+      ADMIN_REGISTRATION_KEY: ${ADMIN_REGISTRATION_KEY:-saukele-admin-secret-key-2026}
+    ports:
+      - "3000:3000"
+
+  # ── Frontend (React + Vite → nginx) ─────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: http://localhost:3000/api/v1
+    container_name: saukele_frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres_data:
+    name: saukele_postgres_data

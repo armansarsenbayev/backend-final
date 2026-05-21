@@ -1,6 +1,7 @@
 'use strict';
 
 const express = require('express');
+const bcrypt = require('bcryptjs');
 const { z } = require('zod');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { validate } = require('../middleware/validate');
@@ -9,6 +10,7 @@ const { prisma } = require('../lib/prisma');
 const { errors } = require('../lib/errors');
 const { enqueueEmail } = require('../lib/queue');
 const { getQueueStatus } = require('../lib/queue');
+const { env } = require('../config/env');
 const familyTreeService = require('../services/familyTree.service');
 const authService = require('../services/auth.service');
 const giftService = require('../services/gift.service');
@@ -223,6 +225,49 @@ router.get('/admin/queue-status', requireAuth, requireRole('ADMIN'),
   asyncHandler(async (req, res) => {
     const status = await getQueueStatus();
     res.status(200).json(status);
+  })
+);
+
+// ── Admin registration (protected by X-Admin-Key header) ──────────────────
+router.post('/admin/register-admin',
+  asyncHandler(async (req, res) => {
+    const adminKey = req.headers['x-admin-key'];
+    if (!env.ADMIN_REGISTRATION_KEY || adminKey !== env.ADMIN_REGISTRATION_KEY) {
+      throw errors.Forbidden('Invalid or missing admin registration key');
+    }
+
+    const parsed = z.object({
+      email: z.string().email(),
+      username: z.string().min(3).max(30),
+      password: z.string().min(8),
+    }).safeParse(req.body);
+
+    if (!parsed.success) {
+      throw errors.ValidationError(parsed.error.issues.map((i) => ({ field: i.path.join('.'), issue: i.message })));
+    }
+
+    const { email, username, password } = parsed.data;
+
+    const [existingEmail, existingUsername] = await Promise.all([
+      prisma.user.findUnique({ where: { email } }),
+      prisma.user.findUnique({ where: { username } }),
+    ]);
+    if (existingEmail) throw errors.EmailTaken();
+    if (existingUsername) throw errors.UsernameTaken();
+
+    const passwordHash = await bcrypt.hash(password, env.BCRYPT_ROUNDS);
+
+    const user = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: { email, username, passwordHash, role: 'ADMIN', isEmailVerified: true, isActive: true },
+      });
+      await tx.auditLog.create({
+        data: { userId: u.id, action: 'USER_REGISTERED', entityType: 'user', entityId: u.id, metadata: { email: u.email, role: 'ADMIN', via: 'admin_registration_key' } },
+      });
+      return u;
+    });
+
+    res.status(201).json(authService.publicUser(user));
   })
 );
 

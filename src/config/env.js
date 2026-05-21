@@ -52,6 +52,9 @@ const schema = z.object({
   REDIS_URL: z.string().optional(),
   UPSTASH_REDIS_REST_URL: z.string().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
+
+  // Admin registration key — required to create ADMIN users via /admin/register-admin
+  ADMIN_REGISTRATION_KEY: z.string().min(16).optional(),
 })
 .superRefine((cfg, ctx) => {
   if (cfg.JWT_ACCESS_SECRET === cfg.JWT_REFRESH_SECRET) {
