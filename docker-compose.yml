@@ -1,7 +1,6 @@
 version: '3.9'
 
 services:
-  # ── PostgreSQL ───────────────────────────────────────────────────────────────
   postgres:
     image: postgres:15-alpine
     container_name: saukele_postgres
@@ -18,7 +17,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # ── Redis ────────────────────────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: saukele_redis
@@ -29,7 +27,6 @@ services:
       timeout: 3s
       retries: 5
 
-  # ── Backend (Node.js + Express + Prisma) ────────────────────────────────────
   backend:
     build:
       context: .
@@ -46,7 +43,6 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://saukele:saukele_pass@postgres:5432/saukele_db
       REDIS_URL: redis://redis:6379
-      # JWT — replace with your own 64-char random strings in production
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dd699c3d98ad16dd5270f4fb82b2ca16a67db5fa99b5d47386baf1e5ca34c1b2}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-073157af0597e7e3417a9dd4ea7e75b1c1f2b387cf5bcd198a0bcc8ab17e2922}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
@@ -63,7 +59,6 @@ services:
     ports:
       - "3000:3000"
 
-  # ── Frontend (React + Vite → nginx) ─────────────────────────────────────────
   frontend:
     build:
       context: ./frontend

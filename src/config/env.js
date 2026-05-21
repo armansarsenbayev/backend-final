@@ -43,17 +43,14 @@ const schema = z.object({
   EXCHANGE_PROVIDER: z.enum(['mock', 'live']).default('mock'),
   EXCHANGE_API_KEY: z.string().optional(),
 
-  // Email (Resend)
   RESEND_API_KEY: z.string().optional(),
   EMAIL_FROM: z.string().default('Saukele <onboarding@resend.dev>'),
   APP_URL: z.string().default('http://localhost:3000'),
 
-  // Redis / Upstash for BullMQ
   REDIS_URL: z.string().optional(),
   UPSTASH_REDIS_REST_URL: z.string().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
-  // Admin registration key — required to create ADMIN users via /admin/register-admin
   ADMIN_REGISTRATION_KEY: z.string().min(16).optional(),
 })
 .superRefine((cfg, ctx) => {

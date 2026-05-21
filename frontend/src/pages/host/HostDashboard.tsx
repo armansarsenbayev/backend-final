@@ -62,12 +62,10 @@ export default function HostDashboard() {
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState('')
 
-  // Modals
   const [showCreateReg, setShowCreateReg] = useState(false)
   const [showCreateGift, setShowCreateGift] = useState(false)
   const [showCreateGuest, setShowCreateGuest] = useState(false)
 
-  // Forms
   const [regForm, setRegForm] = useState({ title: '', event_date: '', is_public: true })
   const [giftForm, setGiftForm] = useState({ title: '', target_amount_kzt: '', required_tier_rank: 0, is_fragile: false })
   const [guestForm, setGuestForm] = useState({ display_name: '', kinship_label: 'other', tier_rank: 0, parent_id: '' })
@@ -194,7 +192,6 @@ export default function HostDashboard() {
       </div>
 
       <div className="flex gap-4 flex-col lg:flex-row">
-        {/* Registries list */}
         <div className="lg:w-64 flex-shrink-0">
           {loading ? (
             <div className="text-gray-400 text-sm p-4 text-center">Загрузка...</div>
@@ -223,7 +220,6 @@ export default function HostDashboard() {
           )}
         </div>
 
-        {/* Registry detail */}
         <div className="flex-1">
           {!selectedReg ? (
             <div className="card text-center text-gray-400 py-16">
@@ -247,7 +243,6 @@ export default function HostDashboard() {
                 </div>
               </div>
 
-              {/* Tabs */}
               <div className="flex border-b mb-4 gap-1">
                 {(['gifts', 'guests', 'tree'] as const).map((tab) => (
                   <button
@@ -260,7 +255,6 @@ export default function HostDashboard() {
                 ))}
               </div>
 
-              {/* Gifts tab */}
               {activeTab === 'gifts' && (
                 <div className="space-y-2">
                   {gifts.length === 0 ? (
@@ -296,7 +290,6 @@ export default function HostDashboard() {
                             )}
                           </div>
                         </div>
-                        {/* Progress bar */}
                         <div className="px-3 pb-2 bg-gray-50">
                           <div className="w-full bg-gray-200 rounded-full h-1.5">
                             <div
@@ -305,7 +298,6 @@ export default function HostDashboard() {
                             />
                           </div>
                         </div>
-                        {/* Contributions panel */}
                         {expandedGift === gift.id && (
                           <div className="p-3 border-t bg-white">
                             <p className="text-xs font-medium text-gray-600 mb-2">Вклады:</p>
@@ -330,7 +322,6 @@ export default function HostDashboard() {
                 </div>
               )}
 
-              {/* Guests tab */}
               {activeTab === 'guests' && (
                 <div className="space-y-2">
                   {guests.length === 0 ? (
@@ -353,7 +344,6 @@ export default function HostDashboard() {
                 </div>
               )}
 
-              {/* Family tree tab */}
               {activeTab === 'tree' && (
                 <div>
                   {!familyTreeRoot ? (
@@ -373,7 +363,6 @@ export default function HostDashboard() {
         </div>
       </div>
 
-      {/* Create Registry Modal */}
       {showCreateReg && (
         <Modal title="Создать реестр" onClose={() => setShowCreateReg(false)}>
           <form onSubmit={createRegistry} className="space-y-3">
@@ -397,7 +386,6 @@ export default function HostDashboard() {
         </Modal>
       )}
 
-      {/* Create Gift Modal */}
       {showCreateGift && (
         <Modal title="Добавить подарок" onClose={() => setShowCreateGift(false)}>
           <form onSubmit={createGift} className="space-y-3">
@@ -425,7 +413,6 @@ export default function HostDashboard() {
         </Modal>
       )}
 
-      {/* Create Guest Modal */}
       {showCreateGuest && (
         <Modal title="Добавить гостя" onClose={() => setShowCreateGuest(false)}>
           <form onSubmit={createGuest} className="space-y-3">

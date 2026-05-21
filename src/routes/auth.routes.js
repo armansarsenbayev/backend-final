@@ -15,7 +15,6 @@ const forgotSchema = z.object({ email: z.string().email() });
 const resetSchema  = z.object({ token: z.string().min(10), password: z.string().min(10).refine(v => /[A-Za-z]/.test(v) && /\d/.test(v), 'must contain letter and digit') });
 const resendSchema = z.object({ email: z.string().email() });
 
-// POST /auth/register
 router.post('/register', authLimiter, validate({ body: registerSchema }),
   asyncHandler(async (req, res) => {
     const user = await authService.register(req.body);
@@ -23,7 +22,6 @@ router.post('/register', authLimiter, validate({ body: registerSchema }),
   })
 );
 
-// GET /auth/verify-email?token=...
 router.get('/verify-email',
   asyncHandler(async (req, res) => {
     const { token } = req.query;
@@ -33,7 +31,6 @@ router.get('/verify-email',
   })
 );
 
-// POST /auth/resend-verification
 router.post('/resend-verification', authLimiter, validate({ body: resendSchema }),
   asyncHandler(async (req, res) => {
     const result = await authService.resendVerification({ email: req.body.email });
@@ -41,7 +38,6 @@ router.post('/resend-verification', authLimiter, validate({ body: resendSchema }
   })
 );
 
-// POST /auth/login
 router.post('/login', authLimiter, validate({ body: loginSchema }),
   asyncHandler(async (req, res) => {
     const result = await authService.login({
@@ -52,7 +48,6 @@ router.post('/login', authLimiter, validate({ body: loginSchema }),
   })
 );
 
-// POST /auth/refresh
 router.post('/refresh', validate({ body: refreshSchema }),
   asyncHandler(async (req, res) => {
     const result = await authService.refresh({
@@ -63,7 +58,6 @@ router.post('/refresh', validate({ body: refreshSchema }),
   })
 );
 
-// POST /auth/logout
 router.post('/logout', requireAuth, validate({ body: logoutSchema }),
   asyncHandler(async (req, res) => {
     await authService.logout({ userId: req.user.id, refreshTokenRaw: req.body.refresh_token });
@@ -71,7 +65,6 @@ router.post('/logout', requireAuth, validate({ body: logoutSchema }),
   })
 );
 
-// GET /auth/me
 router.get('/me', requireAuth,
   asyncHandler(async (req, res) => {
     const user = await authService.me(req.user.id);
@@ -79,7 +72,6 @@ router.get('/me', requireAuth,
   })
 );
 
-// POST /auth/forgot-password
 router.post('/forgot-password', authLimiter, validate({ body: forgotSchema }),
   asyncHandler(async (req, res) => {
     const result = await authService.forgotPassword({ email: req.body.email });
@@ -87,7 +79,6 @@ router.post('/forgot-password', authLimiter, validate({ body: forgotSchema }),
   })
 );
 
-// POST /auth/reset-password
 router.post('/reset-password', authLimiter, validate({ body: resetSchema }),
   asyncHandler(async (req, res) => {
     const result = await authService.resetPassword({ token: req.body.token, newPassword: req.body.password });

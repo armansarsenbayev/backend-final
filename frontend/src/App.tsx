@@ -33,14 +33,12 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Public */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
 
-          {/* Root → role redirect */}
           <Route
             path="/"
             element={
@@ -50,7 +48,6 @@ export default function App() {
             }
           />
 
-          {/* Role dashboards */}
           <Route
             path="/host"
             element={

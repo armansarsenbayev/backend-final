@@ -16,7 +16,6 @@ const router = express.Router();
 
 const giftIdParams = z.object({ gift_id: z.string().uuid() });
 
-// GET /gifts/:gift_id
 router.get(
   '/:gift_id',
   requireAuth,
@@ -31,7 +30,6 @@ router.get(
   }),
 );
 
-// GET /gifts/:gift_id/contributions
 router.get(
   '/:gift_id/contributions',
   requireAuth,
@@ -47,7 +45,6 @@ router.get(
   }),
 );
 
-// POST /gifts/:gift_id/contributions  
 router.post(
   '/:gift_id/contributions',
   requireAuth,

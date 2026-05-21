@@ -53,7 +53,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const refreshToken = localStorage.getItem('refresh_token')
       if (refreshToken) await api.post('/auth/logout', { refresh_token: refreshToken })
     } catch {
-      // ignore
     } finally {
       localStorage.clear()
       setUser(null)

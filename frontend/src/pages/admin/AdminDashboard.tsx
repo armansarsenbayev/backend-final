@@ -16,7 +16,6 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true)
   const [msg, setMsg] = useState('')
 
-  // Create admin form
   const [adminForm, setAdminForm] = useState({ email: '', username: '', password: '', adminKey: '' })
   const [adminLoading, setAdminLoading] = useState(false)
 
@@ -89,7 +88,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Tabs */}
       <div className="flex border-b mb-6 gap-1">
         {(['users', 'queue', 'create-admin'] as const).map((tab) => (
           <button
@@ -102,7 +100,6 @@ export default function AdminDashboard() {
         ))}
       </div>
 
-      {/* Users tab */}
       {activeTab === 'users' && (
         <div>
           <div className="flex gap-2 mb-4 flex-wrap">
@@ -172,7 +169,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Queue tab */}
       {activeTab === 'queue' && (
         <div>
           <button onClick={fetchQueueStatus} className="btn-secondary text-sm mb-4">↻ Обновить статус</button>
@@ -202,7 +198,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Create Admin tab */}
       {activeTab === 'create-admin' && (
         <div className="max-w-md">
           <div className="card">
