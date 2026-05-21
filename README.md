@@ -182,3 +182,110 @@ Output shows 18+ tests across unit and integration suites.
 
 ## Environment Variables Reference
 See `.env.example` for full list with descriptions.
+
+---
+
+## Deployment
+
+### Option A — Docker Compose (Local / VPS)
+
+Run the full stack (PostgreSQL + Redis + Backend + Frontend) with a single command:
+
+```bash
+# 1. Copy and configure environment
+cp .env.example .env
+# Edit .env — fill in JWT secrets, Resend API key, ADMIN_REGISTRATION_KEY
+
+# 2. Build and start all services
+docker compose up --build -d
+
+# 3. Check service health
+docker compose ps
+docker compose logs backend --tail=50
+```
+
+| Service   | Local URL                        | Notes                          |
+|-----------|----------------------------------|--------------------------------|
+| Backend   | http://localhost:3000            | Express API                    |
+| Swagger   | http://localhost:3000/docs       | Interactive API docs           |
+| Frontend  | http://localhost:5173            | React SPA served via nginx     |
+| Postgres  | localhost:5432                   | saukele / saukele_pass         |
+| Redis     | localhost:6379                   | BullMQ queue                   |
+
+Prisma migrations run **automatically** on backend container startup.
+
+To stop and remove volumes:
+```bash
+docker compose down -v
+```
+
+---
+
+### Option B — Render.com (Free tier)
+
+#### Backend (Web Service)
+1. Create new **Web Service** → connect your GitHub repo
+2. **Build Command:** `npm ci && npx prisma generate`
+3. **Start Command:** `npx prisma migrate deploy && node src/server.js`
+4. **Environment:** Add all variables from `.env.example`
+5. Add a **PostgreSQL** add-on → Render sets `DATABASE_URL` automatically
+6. Add an **Upstash Redis** add-on (or use upstash.com free tier) → set `REDIS_URL`
+
+#### Frontend (Static Site)
+1. Create new **Static Site** → same repo, set **Root Directory** to `frontend`
+2. **Build Command:** `npm ci && npm run build`
+3. **Publish Directory:** `frontend/dist`
+4. Set environment variable: `VITE_API_URL=https://<your-backend>.onrender.com/api/v1`
+
+---
+
+### Option C — Railway.app
+
+```bash
+# Install Railway CLI
+npm install -g @railway/cli
+railway login
+
+# Deploy backend
+railway init
+railway add postgresql redis
+railway up
+
+# Set environment variables
+railway variables set JWT_ACCESS_SECRET=... JWT_REFRESH_SECRET=... ADMIN_REGISTRATION_KEY=...
+
+# Deploy frontend separately
+cd frontend
+railway up
+```
+
+---
+
+### Creating the first ADMIN user
+
+After deployment, create the first admin via the protected endpoint:
+
+```bash
+curl -X POST https://<your-backend>/api/v1/admin/register-admin \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Key: <your-ADMIN_REGISTRATION_KEY>" \
+  -d '{"email":"admin@example.com","username":"admin","password":"SecurePass123!"}'
+```
+
+Or use the **Admin Dashboard** → **🔐 Создать ADMIN** tab in the frontend UI.
+
+---
+
+### Environment Variables Reference
+See `.env.example` for the full annotated list. Key variables:
+
+| Variable                  | Required | Description                                  |
+|---------------------------|----------|----------------------------------------------|
+| `DATABASE_URL`            | ✅       | PostgreSQL connection string                 |
+| `JWT_ACCESS_SECRET`       | ✅       | 64-char random string for access tokens      |
+| `JWT_REFRESH_SECRET`      | ✅       | 64-char random string (must differ from above)|
+| `RESEND_API_KEY`          | ✅       | API key from resend.com                      |
+| `REDIS_URL`               | ✅       | Redis connection string (or Upstash)         |
+| `ADMIN_REGISTRATION_KEY`  | ✅       | Min 16-char secret for /admin/register-admin |
+| `CORS_ORIGINS`            | ✅       | Comma-separated list of allowed origins      |
+| `APP_URL`                 | ✅       | Public URL of the backend (for email links)  |

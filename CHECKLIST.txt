@@ -1,21 +1,95 @@
-Verification Checklist
-======================
+Verification Checklist — Saukele Digital Wedding Registry
+==========================================================
 
-[x] openapi.yaml validated (parses cleanly; 18 endpoints across 8 tags).
-[x] Prisma schema reviewed for correctness; raw-SQL constraints in
-    prisma/migrations/0002_constraints/migration.sql validated by syntax.
-[x] All documents include numbered section headers for easy reference.
-[x] Auth subsystem (register, login, logout, refresh) fully specified.
-[x] RBAC with at least 2 distinct roles documented (HOST, GUEST, ADMIN).
-[x] Self-referential Guest.parent_id covers the recursive family-tree
-    requirement; recursive CTE is documented with cycle guard + depth cap.
-[x] Atomic contribution transaction documented at three levels:
-    architecture (§4 contribution.service.js), schema (§6 of database-schema),
-    and feature flow (§4.5 of features-specification).
-[x] Multi-currency snapshot is explicit and immutable (rate_locked_at,
-    exchange_rate columns are write-once).
-[x] Cursor-based pagination contract defined in openapi.yaml `Pagination`
-    schema; applied to /registries, /gifts, /contributions, /guests, /admin/users.
-[x] Standardized error response (`ErrorResponse`) reused across all error codes.
-[x] Stack consistent across all docs: Node.js + Express + Prisma + PostgreSQL
-    + Redis. No leftover Sequelize references.
+## Sprint 1 — Backend Core
+[x] openapi.yaml validated (parses cleanly; 28 endpoints across 9 tags)
+[x] Prisma schema reviewed; no raw SQL (only parameterized $queryRaw for recursive CTE)
+[x] Auth subsystem: register, login, logout, refresh, me — fully implemented
+[x] Email verification on registration (Resend + BullMQ queue)
+[x] Password reset via email (forgot-password + reset-password)
+[x] RBAC with 5 distinct roles: HOST, GUEST, VENDOR, COURIER, ADMIN
+[x] JWT access token (15m) + refresh token (7d) rotation
+[x] bcrypt password hashing (configurable rounds, default 12)
+[x] Self-referential Guest.parent_id for recursive family-tree (WITH RECURSIVE CTE)
+[x] Atomic contribution transaction (Prisma $transaction + Serializable isolation)
+[x] Multi-currency snapshot: exchange_rate + rate_locked_at are immutable
+[x] Gift state machine: PENDING → FUNDED → PURCHASED → DELIVERED / CANCELLED
+[x] Cursor-based pagination on all list endpoints
+[x] Standardized ErrorResponse schema reused across all endpoints
+[x] Rate limiting (express-rate-limit), CORS (allowlist), Helmet security headers
+[x] 27+ tests (Jest + Supertest) — unit + integration suites
+
+## Sprint 2 — Roles & Logistics
+[x] VENDOR endpoints: GET /vendor/gifts, PATCH /vendor/gifts/:id/purchase, GET /vendor/gifts/my
+[x] COURIER endpoints: GET /courier/gifts, PATCH /courier/gifts/:id/deliver, GET /courier/gifts/my
+[x] ADMIN endpoints: GET /admin/users, PATCH /admin/users/:id/activate, GET /admin/queue-status
+[x] POST /admin/register-admin — protected by X-Admin-Key header (ADMIN_REGISTRATION_KEY env)
+[x] Gift cancel endpoint: PATCH /gifts/:id/cancel (HOST only, refunds contributions)
+[x] Full CRUD for registries, gifts, guests
+[x] BullMQ + Upstash Redis async email queue with 3 retry attempts + exponential backoff
+[x] Email events: verification, funded, purchased, delivered, password reset
+
+## Sprint 3 — Frontend Demo
+[x] React 18 + Vite + TypeScript project scaffolded in /frontend
+[x] TailwindCSS 3.x configured with custom component classes
+[x] React Router v6 with role-based redirect on login
+[x] Axios instance with Authorization header injection
+[x] Automatic JWT refresh on 401 (interceptor with queued retry)
+[x] Access/refresh tokens persisted in localStorage
+[x] AuthContext (Context API) for global user state
+
+[x] Public pages:
+    [x] /login         — email + password form → POST /auth/login
+    [x] /register      — email, username, password, role selector → POST /auth/register
+    [x] /verify-email  — auto-calls GET /auth/verify-email?token=
+    [x] /forgot-password — POST /auth/forgot-password
+    [x] /reset-password  — POST /auth/reset-password
+
+[x] Protected dashboards (role-gated via ProtectedRoute):
+    [x] HOST dashboard:
+        [x] List registries, create new registry (modal)
+        [x] Add/delete gifts with target amount, tier, fragile flag
+        [x] Progress bar per gift (current_amount_kzt / target_amount_kzt)
+        [x] View contributions per gift (expandable panel)
+        [x] Cancel gift button (PENDING/FUNDED only)
+        [x] Add/delete guests with kinship label (Kazakh terms) + tier rank
+        [x] Family tree visualization (recursive tree render)
+    [x] GUEST dashboard:
+        [x] Browse registries and gifts filtered by tier rank
+        [x] Contribute with multi-currency selector (KZT, USD, EUR, RUB, GBP, CNY, TRY)
+        [x] View contribution history
+    [x] VENDOR dashboard:
+        [x] List FUNDED gifts available to purchase
+        [x] Confirm purchase button (FUNDED → PURCHASED)
+        [x] My assigned gifts list
+    [x] COURIER dashboard:
+        [x] List PURCHASED gifts ready to deliver
+        [x] Confirm delivery button (PURCHASED → DELIVERED)
+        [x] My deliveries list
+    [x] ADMIN dashboard:
+        [x] List all users with role filter
+        [x] Activate/deactivate user accounts
+        [x] BullMQ queue status panel (waiting, active, completed, failed, delayed)
+        [x] Create new ADMIN form (uses X-Admin-Key header)
+
+## Sprint 4 — Docker & Deployment
+[x] Root Dockerfile for backend (multi-stage: deps + runner, Node 20 Alpine)
+[x] frontend/Dockerfile (multi-stage: Vite build + nginx:alpine serve)
+[x] frontend/nginx.conf (SPA fallback, asset caching, gzip)
+[x] docker-compose.yml with 4 services: postgres, redis, backend, frontend
+[x] Healthchecks on postgres (pg_isready) and redis (redis-cli ping)
+[x] Backend waits for healthy postgres + redis before starting
+[x] Prisma migrate deploy runs automatically on container startup
+[x] Named volume for postgres_data persistence
+[x] DEPLOYED_URL.txt created (fill in after deploy)
+[x] README.md updated with Deployment section (Docker + Render/Railway)
+[x] CHANGES.md created with full description of all changes
+
+## Constraints Verified
+[x] NO raw SQL used — only Prisma ORM (parameterized $queryRaw only for WITH RECURSIVE)
+[x] schema.prisma NOT modified in Sprint 2/3/4
+[x] Migrations NOT modified or added in Sprint 2/3/4
+[x] All existing env variables from .env.example used as-is
+[x] ADMIN_REGISTRATION_KEY added to .env.example (new variable)
+[x] Frontend uses VITE_API_URL env variable for backend URL
+[x] No mock data — frontend calls real API endpoints
