@@ -22,7 +22,6 @@ const router = express.Router();
 const guestIdParam = z.object({ guest_id: z.string().uuid() });
 const giftIdParam  = z.object({ gift_id: z.string().uuid() });
 
-// ── Family tree ────────────────────────────────────────────────────────────
 router.get('/guests/:guest_id/family-tree', requireAuth,
   validate({ params: guestIdParam, query: familyTreeQuery }),
   asyncHandler(async (req, res) => {
@@ -38,8 +37,6 @@ router.get('/guests/:guest_id/family-tree', requireAuth,
   })
 );
 
-// ── VENDOR endpoints ───────────────────────────────────────────────────────
-// GET /vendor/gifts — list all FUNDED gifts (available to purchase)
 router.get('/vendor/gifts', requireAuth, requireRole('VENDOR', 'ADMIN'),
   validate({ query: paginationQuery }),
   asyncHandler(async (req, res) => {
@@ -57,7 +54,6 @@ router.get('/vendor/gifts', requireAuth, requireRole('VENDOR', 'ADMIN'),
   })
 );
 
-// PATCH /vendor/gifts/:gift_id/purchase — FUNDED → PURCHASED
 router.patch('/vendor/gifts/:gift_id/purchase', requireAuth, requireRole('VENDOR', 'ADMIN'),
   validate({ params: giftIdParam }),
   asyncHandler(async (req, res) => {
@@ -76,7 +72,6 @@ router.patch('/vendor/gifts/:gift_id/purchase', requireAuth, requireRole('VENDOR
       return g;
     });
 
-    // Notify host via email
     const registry = await prisma.registry.findUnique({ where: { id: gift.registryId }, include: { host: true } });
     if (registry?.host?.email) {
       await enqueueEmail('gift_purchased', {
@@ -91,7 +86,6 @@ router.patch('/vendor/gifts/:gift_id/purchase', requireAuth, requireRole('VENDOR
   })
 );
 
-// GET /vendor/gifts/my — gifts this vendor is handling
 router.get('/vendor/gifts/my', requireAuth, requireRole('VENDOR'),
   validate({ query: paginationQuery }),
   asyncHandler(async (req, res) => {
@@ -104,8 +98,6 @@ router.get('/vendor/gifts/my', requireAuth, requireRole('VENDOR'),
   })
 );
 
-// ── COURIER endpoints ──────────────────────────────────────────────────────
-// GET /courier/gifts — list all PURCHASED gifts (available to deliver)
 router.get('/courier/gifts', requireAuth, requireRole('COURIER', 'ADMIN'),
   validate({ query: paginationQuery }),
   asyncHandler(async (req, res) => {
@@ -123,7 +115,6 @@ router.get('/courier/gifts', requireAuth, requireRole('COURIER', 'ADMIN'),
   })
 );
 
-// PATCH /courier/gifts/:gift_id/deliver — PURCHASED → DELIVERED
 router.patch('/courier/gifts/:gift_id/deliver', requireAuth, requireRole('COURIER', 'ADMIN'),
   validate({ params: giftIdParam }),
   asyncHandler(async (req, res) => {
@@ -142,7 +133,6 @@ router.patch('/courier/gifts/:gift_id/deliver', requireAuth, requireRole('COURIE
       return g;
     });
 
-    // Notify host via email
     const registry = await prisma.registry.findUnique({ where: { id: gift.registryId }, include: { host: true } });
     if (registry?.host?.email) {
       await enqueueEmail('gift_delivered', {
@@ -156,7 +146,6 @@ router.patch('/courier/gifts/:gift_id/deliver', requireAuth, requireRole('COURIE
   })
 );
 
-// GET /courier/gifts/my — gifts this courier is delivering
 router.get('/courier/gifts/my', requireAuth, requireRole('COURIER'),
   asyncHandler(async (req, res) => {
     const rows = await prisma.gift.findMany({
@@ -167,7 +156,6 @@ router.get('/courier/gifts/my', requireAuth, requireRole('COURIER'),
   })
 );
 
-// ── Gift cancel (HOST) ─────────────────────────────────────────────────────
 router.patch('/gifts/:gift_id/cancel', requireAuth, requireRole('HOST'),
   validate({ params: giftIdParam }),
   asyncHandler(async (req, res) => {
@@ -181,7 +169,6 @@ router.patch('/gifts/:gift_id/cancel', requireAuth, requireRole('HOST'),
 
     const updated = await prisma.$transaction(async (tx) => {
       const g = await tx.gift.update({ where: { id: gift.id }, data: { state: 'CANCELLED' } });
-      // Mark all funded contributions as refunded
       await tx.contribution.updateMany({ where: { giftId: gift.id, status: 'FUNDED' }, data: { status: 'REFUNDED' } });
       await tx.auditLog.create({ data: { userId: req.user.id, action: 'GIFT_STATE_CHANGED', entityType: 'gift', entityId: gift.id, metadata: { from: gift.state, to: 'CANCELLED' } } });
       return g;
@@ -190,7 +177,6 @@ router.patch('/gifts/:gift_id/cancel', requireAuth, requireRole('HOST'),
   })
 );
 
-// ── Admin ──────────────────────────────────────────────────────────────────
 router.get('/admin/users', requireAuth, requireRole('ADMIN'),
   validate({ query: paginationQuery.extend({ role: z.enum(['HOST', 'GUEST', 'VENDOR', 'COURIER', 'ADMIN']).optional() }) }),
   asyncHandler(async (req, res) => {
@@ -209,7 +195,6 @@ router.get('/admin/users', requireAuth, requireRole('ADMIN'),
   })
 );
 
-// PATCH /admin/users/:user_id/activate — activate/deactivate user
 router.patch('/admin/users/:user_id/activate', requireAuth, requireRole('ADMIN'),
   validate({ params: z.object({ user_id: z.string().uuid() }), body: z.object({ isActive: z.boolean() }) }),
   asyncHandler(async (req, res) => {
@@ -220,7 +205,6 @@ router.patch('/admin/users/:user_id/activate', requireAuth, requireRole('ADMIN')
   })
 );
 
-// ── Queue status ───────────────────────────────────────────────────────────
 router.get('/admin/queue-status', requireAuth, requireRole('ADMIN'),
   asyncHandler(async (req, res) => {
     const status = await getQueueStatus();
@@ -228,7 +212,6 @@ router.get('/admin/queue-status', requireAuth, requireRole('ADMIN'),
   })
 );
 
-// ── Admin registration (protected by X-Admin-Key header) ──────────────────
 router.post('/admin/register-admin',
   asyncHandler(async (req, res) => {
     const adminKey = req.headers['x-admin-key'];

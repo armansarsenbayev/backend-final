@@ -26,7 +26,6 @@ export default function GuestDashboard() {
   const [myContributions, setMyContributions] = useState<Contribution[]>([])
   const [activeTab, setActiveTab] = useState<'gifts' | 'history'>('gifts')
 
-  // Contribute modal
   const [showContribute, setShowContribute] = useState(false)
   const [selectedGift, setSelectedGift] = useState<Gift | null>(null)
   const [contribForm, setContribForm] = useState({ amount_original: '', currency_original: 'KZT' })
@@ -103,7 +102,6 @@ export default function GuestDashboard() {
       )}
 
       <div className="flex gap-4 flex-col lg:flex-row">
-        {/* Registries */}
         <div className="lg:w-64 flex-shrink-0">
           <h2 className="text-sm font-semibold text-gray-600 mb-2 uppercase tracking-wide">Реестры</h2>
           {loading ? (
@@ -126,7 +124,6 @@ export default function GuestDashboard() {
           )}
         </div>
 
-        {/* Detail */}
         <div className="flex-1">
           {!selectedReg ? (
             <div className="card text-center text-gray-400 py-16">
@@ -155,7 +152,6 @@ export default function GuestDashboard() {
                 </button>
               </div>
 
-              {/* Gifts */}
               {activeTab === 'gifts' && (
                 <div className="space-y-2">
                   {gifts.length === 0 ? (
@@ -191,7 +187,6 @@ export default function GuestDashboard() {
                 </div>
               )}
 
-              {/* History */}
               {activeTab === 'history' && (
                 <div>
                   {myContributions.length === 0 ? (
@@ -219,7 +214,6 @@ export default function GuestDashboard() {
         </div>
       </div>
 
-      {/* Contribute Modal */}
       {showContribute && selectedGift && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">

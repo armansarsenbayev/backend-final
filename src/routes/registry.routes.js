@@ -17,7 +17,6 @@ const registryUpdateSchema = registryCreateSchema.partial();
 const giftUpdateSchema = giftCreateSchema.partial();
 const guestUpdateSchema = guestCreateSchema.partial();
 
-// ── Registries ────────────────────────────────────────────────────────────
 router.post('/', requireAuth, requireRole('HOST'), validate({ body: registryCreateSchema }),
   asyncHandler(async (req, res) => {
     const r = await registryService.createRegistry({ hostId: req.user.id, title: req.body.title, eventDate: req.body.event_date, isPublic: req.body.is_public });
@@ -53,7 +52,6 @@ router.delete('/:registry_id', requireAuth, requireRole('HOST'), validate({ para
   })
 );
 
-// ── Gifts ─────────────────────────────────────────────────────────────────
 router.post('/:registry_id/gifts', requireAuth, requireRole('HOST'), validate({ params: idParam, body: giftCreateSchema }),
   asyncHandler(async (req, res) => {
     const g = await giftService.createGift({ registryId: req.params.registry_id, hostId: req.user.id, body: req.body });
@@ -84,7 +82,6 @@ router.delete('/:registry_id/gifts/:gift_id', requireAuth, requireRole('HOST'),
   })
 );
 
-// ── Guests ────────────────────────────────────────────────────────────────
 router.post('/:registry_id/guests', requireAuth, requireRole('HOST'), validate({ params: idParam, body: guestCreateSchema }),
   asyncHandler(async (req, res) => {
     const g = await guestService.createGuest({ registryId: req.params.registry_id, hostId: req.user.id, body: req.body });
