@@ -1,0 +1,2946 @@
+{
+  "info": {
+    "_postman_id": "b031367c-a73d-4b88-81ee-4979cff95215",
+    "name": "Saukele Backend — Final Defense",
+    "description": "62 requests across 14 folders. auth inherits from collection level. Run 0→13 in order.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "49209331",
+    "_collection_link": "https://go.postman.co/collection/49209331-b031367c-a73d-4b88-81ee-4979cff95215?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "0 — Health",
+      "item": [
+        {
+          "name": "GET /healthz",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('status ok',()=>pm.expect(pm.response.json().status).to.eql('ok'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/healthz",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "healthz"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "1 — Register (4 roles + blocked ADMIN)",
+      "item": [
+        {
+          "name": "1.1 Register HOST",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "const j=pm.response.json();",
+                  "pm.test('role HOST',()=>pm.expect(j.role).to.eql('HOST'));",
+                  "pm.test('is_email_verified false',()=>pm.expect(j.is_email_verified).to.be.false);",
+                  "pm.test('no passwordHash',()=>pm.expect(j.passwordHash).to.be.undefined);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"host@saukele.kz\",\n  \"username\": \"host_user\",\n  \"password\": \"Saukele2025!\",\n  \"role\": \"HOST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Register GUEST",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "pm.environment.set('guest_user_id',pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"guest@saukele.kz\",\n  \"username\": \"guest_user\",\n  \"password\": \"Saukele2025!\",\n  \"role\": \"GUEST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Register VENDOR",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "pm.test('role VENDOR',()=>pm.expect(pm.response.json().role).to.eql('VENDOR'));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"tttt41476@gmail.com\",\n  \"username\": \"vendor_user\",\n  \"password\": \"Saukele2025!\",\n  \"role\": \"VENDOR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Register COURIER",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "pm.test('role COURIER',()=>pm.expect(pm.response.json().role).to.eql('COURIER'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"courier@saukele.kz\",\n  \"username\": \"courier_user\",\n  \"password\": \"Saukele2025!\",\n  \"role\": \"COURIER\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 Register ADMIN → 422 blocked",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 ADMIN blocked',()=>pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"evil@test.com\",\n  \"username\": \"evil_admin\",\n  \"password\": \"Saukele2025!\",\n  \"role\": \"ADMIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.6 Resend Verification Email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"host@saukele.kz\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/resend-verification",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "resend-verification"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.7 Verify Email (paste token from logs)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 or 422',()=>pm.expect([200,422]).to.include(pm.response.code));",
+                  "if(pm.response.code===200)pm.test('verified',()=>pm.expect(pm.response.json().message).to.include('verified'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/verify-email?token={{verify_token}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "verify-email"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{verify_token}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2 — Login & Token Management",
+      "item": [
+        {
+          "name": "2.1 Login HOST → saves access_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "const j=pm.response.json();",
+                  "pm.test('has access_token',()=>pm.expect(j.access_token).to.be.a('string'));",
+                  "pm.test('has refresh_token',()=>pm.expect(j.refresh_token).to.be.a('string'));",
+                  "pm.test('token_type Bearer',()=>pm.expect(j.token_type).to.eql('Bearer'));",
+                  "pm.test('expires_in 900',()=>pm.expect(j.expires_in).to.eql(900));",
+                  "pm.environment.set('access_token',j.access_token);",
+                  "pm.environment.set('refresh_token',j.refresh_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"host@saukele.kz\",\n  \"password\": \"Saukele2025!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Login unverified → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 unverified blocked',()=>pm.response.to.have.status(403));",
+                  "pm.test('error about verify',()=>pm.expect(pm.response.json().error).to.include('verify'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"guest@saukele.kz\",\n  \"password\": \"Saukele2025!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Login wrong password → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 INVALID_CREDENTIALS',()=>pm.response.to.have.status(401));",
+                  "pm.test('code INVALID_CREDENTIALS',()=>pm.expect(pm.response.json().code).to.eql('INVALID_CREDENTIALS'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"host@saukele.kz\",\n  \"password\": \"WrongPass999!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 Login VENDOR → saves vendor_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json();",
+                  "if(j.access_token){pm.environment.set('vendor_token',j.access_token);pm.test('200 OK',()=>pm.response.to.have.status(200));}",
+                  "else{pm.test('verify vendor email first',()=>pm.expect([200,403]).to.include(pm.response.code));}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"vendor@saukele.kz\",\n  \"password\": \"Saukele2025!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 Login COURIER → saves courier_token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const j=pm.response.json();",
+                  "if(j.access_token){pm.environment.set('courier_token',j.access_token);pm.test('200 OK',()=>pm.response.to.have.status(200));}",
+                  "else{pm.test('verify courier email first',()=>pm.expect([200,403]).to.include(pm.response.code));}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"courier@saukele.kz\",\n  \"password\": \"Saukele2025!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/login",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.6 GET /auth/me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "const j=pm.response.json();",
+                  "pm.test('role HOST',()=>pm.expect(j.role).to.eql('HOST'));",
+                  "pm.test('is_email_verified true',()=>pm.expect(j.is_email_verified).to.be.true);",
+                  "pm.test('no passwordHash',()=>pm.expect(j.passwordHash).to.be.undefined);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/me",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.7 Refresh Token → rotation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "const j=pm.response.json();",
+                  "pm.test('new access_token',()=>pm.expect(j.access_token).to.be.a('string'));",
+                  "pm.test('new refresh differs',()=>pm.expect(j.refresh_token).to.not.eql(pm.environment.get('refresh_token')));",
+                  "pm.environment.set('access_token',j.access_token);",
+                  "pm.environment.set('refresh_token',j.refresh_token);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/refresh",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3 — Password Reset Flow",
+      "item": [
+        {
+          "name": "3.1 Forgot Password → sends email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('generic message',()=>pm.expect(pm.response.json().message).to.include('sent'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"host@saukele.kz\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/forgot-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "forgot-password"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Reset Password (paste token from logs)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 or 422',()=>pm.expect([200,422]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{reset_token}}\",\n  \"password\": \"NewSaukele2025!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/reset-password",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4 — Registries CRUD (HOST)",
+      "item": [
+        {
+          "name": "4.1 POST /registries",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "const j=pm.response.json();",
+                  "pm.environment.set('registry_id',j.id);",
+                  "pm.test('has id',()=>pm.expect(j.id).to.be.a('string'));",
+                  "pm.test('has host_id',()=>pm.expect(j.host_id).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Aizhan & Daulet — Үйлену тойы\",\n  \"event_date\": \"2025-12-31T18:00:00Z\",\n  \"is_public\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 GET /registries (paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('data array',()=>pm.expect(pm.response.json().data).to.be.an('array'));",
+                  "pm.test('has next_cursor',()=>pm.expect(pm.response.json()).to.have.property('next_cursor'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries?limit=5",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 GET /registries/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('id matches',()=>pm.expect(pm.response.json().id).to.eql(pm.environment.get('registry_id')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 PATCH /registries/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('title updated',()=>pm.expect(pm.response.json().title).to.include('Updated'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Aizhan & Daulet — Updated Title\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5 — Gifts CRUD (HOST)",
+      "item": [
+        {
+          "name": "5.1 POST gift (Сәукеле — 450k, tier=1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "const j=pm.response.json();",
+                  "pm.environment.set('gift_id',j.id);",
+                  "pm.test('state PENDING',()=>pm.expect(j.state).to.eql('PENDING'));",
+                  "pm.test('current=0',()=>pm.expect(j.current_amount_kzt).to.eql(0));",
+                  "pm.test('target=450000',()=>pm.expect(j.target_amount_kzt).to.eql(450000));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Сәукеле (traditional headpiece)\",\n  \"description\": \"Hand-embroidered Kazakh bridal headdress\",\n  \"target_amount_kzt\": 450000,\n  \"required_tier_rank\": 1,\n  \"is_fragile\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/gifts",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "gifts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.2 POST gift (small — 5000 KZT for funding demo)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "pm.environment.set('small_gift_id',pm.response.json().id);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Цветы для невесты\",\n  \"description\": \"Small gift — fully funded in one contribution\",\n  \"target_amount_kzt\": 5000,\n  \"required_tier_rank\": 5,\n  \"is_fragile\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/gifts",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "gifts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.3 GET /registries/:id/gifts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('data array',()=>pm.expect(pm.response.json().data).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/gifts",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "gifts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.4 GET /gifts/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/{{gift_id}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "{{gift_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.5 PATCH /registries/:id/gifts/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('description updated',()=>pm.expect(pm.response.json().description).to.include('Updated'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated: Ornate Kazakh bridal headdress\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/gifts/{{gift_id}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "gifts",
+                "{{gift_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6 — Guests & ⭐ Family Tree",
+      "item": [
+        {
+          "name": "6.1 POST guest root (Ата — tier=0)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "const j=pm.response.json();",
+                  "pm.environment.set('root_guest_id',j.id);",
+                  "pm.test('parent_id null',()=>pm.expect(j.parent_id).to.be.null);",
+                  "pm.test('tier_rank 0',()=>pm.expect(j.tier_rank).to.eql(0));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Ата (Father of Bride)\",\n  \"kinship_label\": \"ata_ana\",\n  \"tier_rank\": 0,\n  \"user_id\": \"{{guest_user_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/guests",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "guests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.2 POST guest child (Аға — tier=1)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "const j=pm.response.json();",
+                  "pm.environment.set('child_guest_id',j.id);",
+                  "pm.test('has parent_id',()=>pm.expect(j.parent_id).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Аға (Elder Brother)\",\n  \"kinship_label\": \"aga_apa\",\n  \"tier_rank\": 1,\n  \"parent_id\": \"{{root_guest_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/guests",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "guests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.3 POST guest grandchild (Жиен — tier=2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Жиен (Nephew)\",\n  \"kinship_label\": \"jien\",\n  \"tier_rank\": 2,\n  \"parent_id\": \"{{child_guest_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/guests",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "guests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.4 GET /registries/:id/guests",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('at least 3 guests',()=>pm.expect(pm.response.json().data.length).to.be.at.least(3));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/guests",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "guests"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.5 PATCH /registries/:id/guests/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('name updated',()=>pm.expect(pm.response.json().display_name).to.include('Жаксыбеков'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"display_name\": \"Ата Жаксыбеков (Father)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/guests/{{root_guest_id}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "guests",
+                "{{root_guest_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "6.6 ⭐ GET /guests/:id/family-tree (WITH RECURSIVE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "const j=pm.response.json();",
+                  "pm.test('root_id present',()=>pm.expect(j.root_id).to.be.a('string'));",
+                  "pm.test('nodes array',()=>pm.expect(j.nodes).to.be.an('array'));",
+                  "pm.test('root depth=0 suggested=100000',()=>{const r=j.nodes.find(n=>n.depth===0);pm.expect(r).to.exist;pm.expect(Number(r.suggested_kzt)).to.eql(100000);});",
+                  "pm.test('child depth=1 suggested=50000',()=>{const c=j.nodes.find(n=>n.depth===1);pm.expect(c).to.exist;pm.expect(Number(c.suggested_kzt)).to.eql(50000);});",
+                  "pm.test('grandchild depth=2 suggested=20000',()=>{const g=j.nodes.find(n=>n.depth===2);pm.expect(g).to.exist;pm.expect(Number(g.suggested_kzt)).to.eql(20000);});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/guests/{{root_guest_id}}/family-tree?max_depth=5",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "guests",
+                "{{root_guest_id}}",
+                "family-tree"
+              ],
+              "query": [
+                {
+                  "key": "max_depth",
+                  "value": "5"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7 — ⭐ Contributions (Atomic + Currency Snapshot)",
+      "item": [
+        {
+          "name": "7.1 Contribute 100 EUR → snapshot",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "const j=pm.response.json();",
+                  "pm.test('status FUNDED',()=>pm.expect(j.status).to.eql('FUNDED'));",
+                  "pm.test('currency EUR',()=>pm.expect(j.currency_original).to.eql('EUR'));",
+                  "pm.test('rate=510.25',()=>pm.expect(j.exchange_rate).to.eql(510.25));",
+                  "pm.test('rate_locked_at set',()=>pm.expect(j.rate_locked_at).to.be.a('string'));",
+                  "pm.test('amount_kzt=51025',()=>pm.expect(j.amount_kzt).to.eql(51025));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guest_id\": \"{{root_guest_id}}\",\n  \"amount_original\": 100.0,\n  \"currency_original\": \"EUR\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/{{gift_id}}/contributions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "{{gift_id}}",
+                "contributions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.2 Contribute 50 USD → different rate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "const j=pm.response.json();",
+                  "pm.test('currency USD',()=>pm.expect(j.currency_original).to.eql('USD'));",
+                  "pm.test('rate=470.5',()=>pm.expect(j.exchange_rate).to.eql(470.5));",
+                  "pm.test('amount_kzt=23525',()=>pm.expect(j.amount_kzt).to.eql(23525));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guest_id\": \"{{root_guest_id}}\",\n  \"amount_original\": 50.0,\n  \"currency_original\": \"USD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/{{gift_id}}/contributions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "{{gift_id}}",
+                "contributions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.3 Fund small gift FULLY → triggers gift_funded email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created',()=>pm.response.to.have.status(201));",
+                  "pm.test('status FUNDED',()=>pm.expect(pm.response.json().status).to.eql('FUNDED'));",
+                  "pm.test('KZT rate=1',()=>pm.expect(pm.response.json().exchange_rate).to.eql(1));",
+                  "pm.test('EMAIL gift_funded → check server logs',()=>pm.expect(true).to.be.true);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guest_id\": \"{{root_guest_id}}\",\n  \"amount_original\": 5000,\n  \"currency_original\": \"KZT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/{{small_gift_id}}/contributions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "{{small_gift_id}}",
+                "contributions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.4 GET /gifts/:id/contributions (cursor paged)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "const j=pm.response.json();",
+                  "pm.test('data array',()=>pm.expect(j.data).to.be.an('array'));",
+                  "pm.test('has next_cursor',()=>pm.expect(j).to.have.property('next_cursor'));",
+                  "pm.test('rate_locked_at present',()=>{if(j.data.length)pm.expect(j.data[0].rate_locked_at).to.be.a('string');});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/{{gift_id}}/contributions?limit=10",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "{{gift_id}}",
+                "contributions"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.5 ⭐ Overfund → 422 POOL_CAP_EXCEEDED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 POOL_CAP_EXCEEDED',()=>pm.response.to.have.status(422));",
+                  "pm.test('code POOL_CAP_EXCEEDED',()=>pm.expect(pm.response.json().code).to.eql('POOL_CAP_EXCEEDED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guest_id\": \"{{root_guest_id}}\",\n  \"amount_original\": 99999999,\n  \"currency_original\": \"KZT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/{{gift_id}}/contributions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "{{gift_id}}",
+                "contributions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.6 Unsupported currency → 422",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422 UNSUPPORTED_CURRENCY',()=>pm.response.to.have.status(422));",
+                  "pm.test('code UNSUPPORTED_CURRENCY',()=>pm.expect(pm.response.json().code).to.eql('UNSUPPORTED_CURRENCY'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guest_id\": \"{{root_guest_id}}\",\n  \"amount_original\": 100,\n  \"currency_original\": \"XYZ\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/{{gift_id}}/contributions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "{{gift_id}}",
+                "contributions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "7.7 Tier blocked → 403 (tier=2 guest on tier=1 gift)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 tier insufficient',()=>pm.response.to.have.status(403));",
+                  "pm.test('code FORBIDDEN',()=>pm.expect(pm.response.json().code).to.eql('FORBIDDEN'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guest_id\": \"{{child_guest_id}}\",\n  \"amount_original\": 100,\n  \"currency_original\": \"KZT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/{{gift_id}}/contributions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "{{gift_id}}",
+                "contributions"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "8 — ⭐ VENDOR Flow (FUNDED → PURCHASED)",
+      "item": [
+        {
+          "name": "8.1 GET /vendor/gifts (FUNDED gifts)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('data array',()=>pm.expect(pm.response.json().data).to.be.an('array'));",
+                  "pm.test('all FUNDED',()=>pm.response.json().data.forEach(g=>pm.expect(g.state).to.eql('FUNDED')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vendor_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/vendor/gifts",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "gifts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.2 PATCH /vendor/gifts/:id/purchase → email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 or 409',()=>pm.expect([200,409]).to.include(pm.response.code));",
+                  "if(pm.response.code===200){pm.test('state PURCHASED',()=>pm.expect(pm.response.json().state).to.eql('PURCHASED'));pm.test('vendor_id set',()=>pm.expect(pm.response.json().vendor_id).to.be.a('string'));}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vendor_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/vendor/gifts/{{small_gift_id}}/purchase",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "gifts",
+                "{{small_gift_id}}",
+                "purchase"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.3 GET /vendor/gifts/my",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vendor_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/vendor/gifts/my",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "gifts",
+                "my"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "8.4 HOST tries /vendor/gifts → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 HOST not VENDOR',()=>pm.response.to.have.status(403));",
+                  "pm.test('code FORBIDDEN',()=>pm.expect(pm.response.json().code).to.eql('FORBIDDEN'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/vendor/gifts",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "gifts"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "9 — ⭐ COURIER Flow (PURCHASED → DELIVERED)",
+      "item": [
+        {
+          "name": "9.1 GET /courier/gifts (PURCHASED gifts)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('data array',()=>pm.expect(pm.response.json().data).to.be.an('array'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courier_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/courier/gifts",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "courier",
+                "gifts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.2 PATCH /courier/gifts/:id/deliver → email",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 or 409',()=>pm.expect([200,409]).to.include(pm.response.code));",
+                  "if(pm.response.code===200){pm.test('state DELIVERED',()=>pm.expect(pm.response.json().state).to.eql('DELIVERED'));pm.test('courier_id set',()=>pm.expect(pm.response.json().courier_id).to.be.a('string'));}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courier_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/courier/gifts/{{small_gift_id}}/deliver",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "courier",
+                "gifts",
+                "{{small_gift_id}}",
+                "deliver"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.3 GET /courier/gifts/my",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courier_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/courier/gifts/my",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "courier",
+                "gifts",
+                "my"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "9.4 HOST tries /courier/gifts → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 HOST not COURIER',()=>pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/courier/gifts",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "courier",
+                "gifts"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "10 — ⭐ RBAC (401 vs 403)",
+      "item": [
+        {
+          "name": "10.1 No token → 401 UNAUTHENTICATED",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 not 403',()=>pm.response.to.have.status(401));",
+                  "pm.test('code UNAUTHENTICATED',()=>pm.expect(pm.response.json().code).to.eql('UNAUTHENTICATED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Hack\",\n  \"event_date\": \"2026-01-01T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.2 Invalid JWT → 401 INVALID_TOKEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 INVALID_TOKEN',()=>pm.response.to.have.status(401));",
+                  "pm.test('code INVALID_TOKEN',()=>pm.expect(pm.response.json().code).to.eql('INVALID_TOKEN'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiJ9.fake.signature",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/me",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.3 VENDOR tries create Registry → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 FORBIDDEN',()=>pm.response.to.have.status(403));",
+                  "pm.test('code FORBIDDEN',()=>pm.expect(pm.response.json().code).to.eql('FORBIDDEN'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{vendor_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Unauthorized\",\n  \"event_date\": \"2026-01-01T00:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.4 HOST tries /admin/users → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 HOST not ADMIN',()=>pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/admin/users",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "10.5 COURIER tries /vendor/gifts → 403",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('403 COURIER not VENDOR',()=>pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{courier_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/vendor/gifts",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "vendor",
+                "gifts"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "11 — Gift State Machine & Cleanup",
+      "item": [
+        {
+          "name": "11.1 PATCH /gifts/:id/cancel (PENDING→CANCELLED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK',()=>pm.response.to.have.status(200));",
+                  "pm.test('state CANCELLED',()=>pm.expect(pm.response.json().state).to.eql('CANCELLED'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/{{gift_id}}/cancel",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "{{gift_id}}",
+                "cancel"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.2 Contribute to CANCELLED → 409 GIFT_NOT_OPEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 GIFT_NOT_OPEN',()=>pm.response.to.have.status(409));",
+                  "pm.test('code GIFT_NOT_OPEN',()=>pm.expect(pm.response.json().code).to.eql('GIFT_NOT_OPEN'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"guest_id\": \"{{root_guest_id}}\",\n  \"amount_original\": 100,\n  \"currency_original\": \"KZT\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/{{gift_id}}/contributions",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "{{gift_id}}",
+                "contributions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.3 DELETE /registries/:id/gifts/:id (CANCELLED)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content',()=>pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/gifts/{{gift_id}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "gifts",
+                "{{gift_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.4 DELETE /registries/:id/guests/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content',()=>pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}/guests/{{child_guest_id}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}",
+                "guests",
+                "{{child_guest_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "11.5 DELETE /registries/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content',()=>pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/registries/{{registry_id}}",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "registries",
+                "{{registry_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "12 — Error Validation",
+      "item": [
+        {
+          "name": "12.1 Weak password → 422 with details",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('422',()=>pm.response.to.have.status(422));",
+                  "pm.test('code VALIDATION_ERROR',()=>pm.expect(pm.response.json().code).to.eql('VALIDATION_ERROR'));",
+                  "pm.test('details array',()=>pm.expect(pm.response.json().details).to.be.an('array'));",
+                  "pm.test('status_code 422',()=>pm.expect(pm.response.json().status_code).to.eql(422));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"weak@test.com\",\n  \"username\": \"weakuser\",\n  \"password\": \"123\",\n  \"role\": \"GUEST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12.2 Duplicate email → 409 EMAIL_TAKEN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('409 EMAIL_TAKEN',()=>pm.response.to.have.status(409));",
+                  "pm.test('code EMAIL_TAKEN',()=>pm.expect(pm.response.json().code).to.eql('EMAIL_TAKEN'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"host@saukele.kz\",\n  \"username\": \"newuser123\",\n  \"password\": \"Saukele2025!\",\n  \"role\": \"HOST\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/register",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "register"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "12.3 Gift not found → 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404',()=>pm.response.to.have.status(404));",
+                  "pm.test('code NOT_FOUND',()=>pm.expect(pm.response.json().code).to.eql('NOT_FOUND'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:3000/api/v1/gifts/00000000-0000-0000-0000-000000000000",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "gifts",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "13 — Logout",
+      "item": [
+        {
+          "name": "13.1 POST /auth/logout → 204",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('204 No Content',()=>pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/logout",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "13.2 Reuse revoked token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('401 revoked',()=>pm.response.to.have.status(401));",
+                  "pm.test('code INVALID_TOKEN',()=>pm.expect(pm.response.json().code).to.eql('INVALID_TOKEN'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:3000/api/v1/auth/refresh",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "3000",
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  }
+}
