@@ -198,7 +198,16 @@ router.get('/admin/registries', requireAuth, requireRole('ADMIN'),
       },
       orderBy: { createdAt: 'desc' },
     });
-    res.status(200).json({ data: rows });
+    const data = rows.map((r) => ({
+      id: r.id,
+      title: r.title,
+      event_date: r.eventDate,
+      is_public: r.isPublic,
+      created_at: r.createdAt,
+      host: r.host,
+      _count: r._count,
+    }));
+    res.status(200).json({ data });
   })
 );
 
@@ -206,13 +215,23 @@ router.get('/admin/contributions', requireAuth, requireRole('ADMIN'),
   asyncHandler(async (req, res) => {
     const rows = await prisma.contribution.findMany({
       include: {
-        guest: { select: { displayName: true, registryId: true } },
+        guest: { select: { displayName: true } },
         gift: { select: { title: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 200,
     });
-    res.status(200).json({ data: rows });
+    const data = rows.map((c) => ({
+      id: c.id,
+      amount_kzt: Number(c.amountKzt),
+      amount_original: Number(c.amountOriginal),
+      currency_original: c.currencyOriginal,
+      status: c.status,
+      created_at: c.createdAt,
+      guest: c.guest ? { displayName: c.guest.displayName } : null,
+      gift: c.gift ? { title: c.gift.title } : null,
+    }));
+    res.status(200).json({ data });
   })
 );
 

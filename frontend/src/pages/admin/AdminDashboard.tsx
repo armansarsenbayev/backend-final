@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, useEffect, FormEvent, ReactNode } from 'react'
 import Layout from '../../components/Layout'
 import api from '../../api/axios'
 
@@ -13,32 +13,34 @@ const ROLES = ['', 'HOST', 'GUEST', 'VENDOR', 'COURIER', 'ADMIN']
 
 type Tab = 'users' | 'registries' | 'contributions' | 'audit' | 'queue' | 'create-admin'
 
-const TAB_CONFIG: { id: Tab; label: string }[] = [
-  { id: 'users', label: '👥 Users' },
-  { id: 'registries', label: '📋 Registries' },
-  { id: 'contributions', label: '💰 Contributions' },
-  { id: 'audit', label: '📜 Audit Log' },
-  { id: 'queue', label: '⚙️ Queue' },
-  { id: 'create-admin', label: '🔐 New Admin' },
+const TAB_CONFIG: { id: Tab; label: string; icon: string }[] = [
+  { id: 'users',        label: 'Users',         icon: '👥' },
+  { id: 'registries',   label: 'Registries',    icon: '📋' },
+  { id: 'contributions',label: 'Contributions', icon: '💰' },
+  { id: 'audit',        label: 'Audit Log',     icon: '📜' },
+  { id: 'queue',        label: 'Queue',         icon: '⚙️' },
+  { id: 'create-admin', label: 'New Admin',     icon: '🔐' },
 ]
 
 const roleColor = (role: string) => {
   const map: Record<string, string> = {
-    HOST: 'bg-purple-100 text-purple-700', GUEST: 'bg-blue-100 text-blue-700',
-    VENDOR: 'bg-orange-100 text-orange-700', COURIER: 'bg-teal-100 text-teal-700',
-    ADMIN: 'bg-red-100 text-red-700',
+    HOST: 'bg-violet-50 text-violet-700 border-violet-200',
+    GUEST: 'bg-blue-50 text-blue-700 border-blue-200',
+    VENDOR: 'bg-orange-50 text-orange-700 border-orange-200',
+    COURIER: 'bg-teal-50 text-teal-700 border-teal-200',
+    ADMIN: 'bg-red-50 text-red-700 border-red-200',
   }
-  return map[role] || 'bg-gray-100 text-gray-600'
+  return map[role] || 'bg-stone-50 text-stone-600 border-stone-200'
 }
 
-function Th({ children }: { children: React.ReactNode }) {
-  return <th className="pb-2 pr-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{children}</th>
+function Th({ children }: { children: ReactNode }) {
+  return <th className="table-th">{children}</th>
 }
-function Td({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return <td className={`py-2.5 pr-4 text-sm ${className}`}>{children}</td>
+function Td({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <td className={`table-td ${className}`}>{children}</td>
 }
 function Empty({ cols, text }: { cols: number; text: string }) {
-  return <tr><td colSpan={cols} className="text-center text-gray-400 py-10 text-sm">{text}</td></tr>
+  return <tr><td colSpan={cols} className="text-center text-stone-400 py-12 text-sm">{text}</td></tr>
 }
 
 export default function AdminDashboard() {
@@ -159,33 +161,38 @@ export default function AdminDashboard() {
     }
   }
 
-  // Safe date formatter to prevent crashes
   const fmt = (d: string | null | undefined) => {
-    if (!d) return '—';
-    try {
-      return new Date(d).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' });
-    } catch (e) {
-      return 'Invalid Date';
-    }
+    if (!d) return '—'
+    try { return new Date(d).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) }
+    catch { return 'Invalid Date' }
   }
+
+  const QUEUE_STATS = [
+    { key: 'waiting',   label: 'Waiting',   color: 'bg-amber-50 border-amber-200 text-amber-800' },
+    { key: 'active',    label: 'Active',    color: 'bg-blue-50 border-blue-200 text-blue-800' },
+    { key: 'completed', label: 'Completed', color: 'bg-emerald-50 border-emerald-200 text-emerald-800' },
+    { key: 'failed',    label: 'Failed',    color: 'bg-red-50 border-red-200 text-red-800' },
+    { key: 'delayed',   label: 'Delayed',   color: 'bg-stone-50 border-stone-200 text-stone-600' },
+  ] as const
 
   return (
     <Layout title="Admin Dashboard">
       {msg && (
-        <div className={`mb-4 px-4 py-2 rounded-lg text-sm flex justify-between items-center ${msg.startsWith('✅') ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
+        <div className={`mb-5 ${msg.startsWith('✅') ? 'alert-success' : 'alert-error'} justify-between`}>
           <span>{msg}</span>
-          <button onClick={() => setMsg('')} className="font-bold ml-4 text-lg leading-none">×</button>
+          <button onClick={() => setMsg('')} className="font-bold ml-4 text-lg leading-none opacity-60 hover:opacity-100">×</button>
         </div>
       )}
 
-      <div className="flex border-b mb-6 gap-0 overflow-x-auto">
-        {TAB_CONFIG.map(({ id, label }) => (
+      {/* Tabs */}
+      <div className="flex border-b border-stone-100 mb-6 gap-0 overflow-x-auto">
+        {TAB_CONFIG.map(({ id, label, icon }) => (
           <button
             key={id}
             onClick={() => switchTab(id)}
-            className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap transition border-b-2 -mb-px ${activeTab === id ? 'border-amber-500 text-amber-700' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+            className={activeTab === id ? 'tab-btn-active' : 'tab-btn-inactive'}
           >
-            {label}
+            <span className="mr-1.5">{icon}</span>{label}
           </button>
         ))}
       </div>
@@ -196,34 +203,42 @@ export default function AdminDashboard() {
           <div className="flex gap-2 mb-4 flex-wrap items-center">
             {ROLES.map((role) => (
               <button key={role} onClick={() => { setRoleFilter(role); fetchUsers(role) }}
-                className={`px-3 py-1.5 text-xs rounded-full border transition ${roleFilter === role ? 'bg-amber-600 text-white border-amber-600' : 'border-gray-300 text-gray-600 hover:border-amber-400'}`}>
+                className={`px-3 py-1.5 text-xs rounded-full border font-medium transition-all ${roleFilter === role ? 'bg-amber-600 text-white border-amber-600 shadow-sm' : 'bg-white border-stone-200 text-stone-600 hover:border-amber-300 hover:text-amber-700'}`}>
                 {role || 'All'}
               </button>
             ))}
-            <button onClick={() => fetchUsers(roleFilter)} className="btn-secondary text-xs ml-auto">↻ Refresh</button>
+            <button onClick={() => fetchUsers(roleFilter)} className="btn-secondary text-xs ml-auto py-1.5 px-3">↻ Refresh</button>
           </div>
-          {usersLoading ? <div className="text-center text-gray-400 py-16">Loading...</div> : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
+          {usersLoading ? (
+            <div className="flex items-center justify-center py-16 text-stone-400 gap-2">
+              <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Loading users...
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-stone-100">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-stone-50 border-b border-stone-100">
                   <tr><Th>Username</Th><Th>Email</Th><Th>Role</Th><Th>Status</Th><Th>Verified</Th><Th>Joined</Th><Th>Actions</Th></tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-stone-50">
                   {!users || users.length === 0 ? <Empty cols={7} text="No users found" /> : users.map((u) => (
-                    <tr key={u.id} className="hover:bg-gray-50">
-                      <Td className="font-medium">@{u.username}</Td>
-                      <Td className="text-gray-600">{u.email}</Td>
-                      <Td><span className={`px-2 py-0.5 rounded-full text-xs font-medium ${roleColor(u.role)}`}>{ROLE_LABELS[u.role] || u.role}</span></Td>
-                      <Td><span className={`px-2 py-0.5 rounded-full text-xs ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{u.is_active ? 'Active' : 'Blocked'}</span></Td>
-                      <Td>{u.is_email_verified ? '✅' : '❌'}</Td>
-                      <Td className="text-gray-400 text-xs">{fmt(u.created_at)}</Td>
+                    <tr key={u.id} className="hover:bg-stone-50/50 transition-colors">
+                      <Td className="font-semibold text-stone-800">@{u.username}</Td>
+                      <Td className="text-stone-500">{u.email}</Td>
+                      <Td><span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${roleColor(u.role)}`}>{ROLE_LABELS[u.role] || u.role}</span></Td>
+                      <Td><span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${u.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>{u.is_active ? 'Active' : 'Blocked'}</span></Td>
+                      <Td>{u.is_email_verified ? <span className="text-emerald-600 font-medium text-xs">✓ Yes</span> : <span className="text-red-400 text-xs">✗ No</span>}</Td>
+                      <Td className="text-stone-400 text-xs">{fmt(u.created_at)}</Td>
                       <Td>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1.5">
                           <button onClick={() => toggleActive(u.id, u.is_active)}
-                            className={`text-xs px-2 py-1 rounded transition ${u.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'}`}>
+                            className={`text-xs px-2.5 py-1 rounded-lg font-medium transition-all ${u.is_active ? 'bg-red-50 text-red-600 hover:bg-red-100 border border-red-200' : 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 border border-emerald-200'}`}>
                             {u.is_active ? 'Block' : 'Activate'}
                           </button>
-                          <button onClick={() => deleteUser(u.id, u.username)} className="text-xs px-2 py-1 rounded bg-gray-100 text-gray-500 hover:bg-red-50 hover:text-red-600 transition">Delete</button>
+                          <button onClick={() => deleteUser(u.id, u.username)} className="text-xs px-2.5 py-1 rounded-lg bg-stone-100 text-stone-500 hover:bg-red-50 hover:text-red-600 border border-stone-200 hover:border-red-200 transition-all font-medium">Delete</button>
                         </div>
                       </Td>
                     </tr>
@@ -239,25 +254,27 @@ export default function AdminDashboard() {
       {activeTab === 'registries' && (
         <div>
           <div className="flex justify-end mb-4">
-            <button onClick={fetchRegistries} className="btn-secondary text-xs">↻ Refresh</button>
+            <button onClick={fetchRegistries} className="btn-secondary text-xs py-1.5 px-3">↻ Refresh</button>
           </div>
-          {regsLoading ? <div className="text-center text-gray-400 py-16">Loading...</div> : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
+          {regsLoading ? (
+            <div className="flex items-center justify-center py-16 text-stone-400 gap-2 text-sm">Loading...</div>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-stone-100">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-stone-50 border-b border-stone-100">
                   <tr><Th>Title</Th><Th>Host</Th><Th>Event Date</Th><Th>Visibility</Th><Th>Gifts</Th><Th>Guests</Th><Th>Actions</Th></tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-stone-50">
                   {!registries || registries.length === 0 ? <Empty cols={7} text="No registries" /> : registries.map((r) => (
-                    <tr key={r.id} className="hover:bg-gray-50">
-                      <Td className="font-medium">{r.title}</Td>
-                      <Td><span className="text-gray-600">@{r.host?.username}</span></Td>
-                      <Td className="text-gray-500 text-xs">{r.event_date ? new Date(r.event_date).toLocaleDateString('en-US') : '—'}</Td>
-                      <Td><span className={`px-2 py-0.5 rounded-full text-xs ${r.is_public ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{r.is_public ? 'Public' : 'Private'}</span></Td>
+                    <tr key={r.id} className="hover:bg-stone-50/50 transition-colors">
+                      <Td className="font-semibold text-stone-800">{r.title}</Td>
+                      <Td className="text-stone-500">@{r.host?.username}</Td>
+                      <Td className="text-stone-400 text-xs">{r.event_date ? new Date(r.event_date).toLocaleDateString('en-US') : '—'}</Td>
+                      <Td><span className={`px-2.5 py-0.5 rounded-full text-xs font-medium border ${r.is_public ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-stone-50 text-stone-600 border-stone-200'}`}>{r.is_public ? 'Public' : 'Private'}</span></Td>
                       <Td>{r._count?.gifts ?? 0}</Td>
                       <Td>{r._count?.guests ?? 0}</Td>
                       <Td>
-                        <button onClick={() => deleteRegistry(r.id, r.title)} className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 transition">Delete</button>
+                        <button onClick={() => deleteRegistry(r.id, r.title)} className="text-xs px-2.5 py-1 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 transition-all font-medium">Delete</button>
                       </Td>
                     </tr>
                   ))}
@@ -272,23 +289,25 @@ export default function AdminDashboard() {
       {activeTab === 'contributions' && (
         <div>
           <div className="flex justify-end mb-4">
-            <button onClick={fetchContributions} className="btn-secondary text-xs">↻ Refresh</button>
+            <button onClick={fetchContributions} className="btn-secondary text-xs py-1.5 px-3">↻ Refresh</button>
           </div>
-          {contribLoading ? <div className="text-center text-gray-400 py-16">Loading...</div> : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
+          {contribLoading ? (
+            <div className="flex items-center justify-center py-16 text-stone-400 gap-2 text-sm">Loading...</div>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-stone-100">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-stone-50 border-b border-stone-100">
                   <tr><Th>Gift</Th><Th>Guest</Th><Th>Amount</Th><Th>KZT</Th><Th>Status</Th><Th>Date</Th></tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-stone-50">
                   {!contributions || contributions.length === 0 ? <Empty cols={6} text="No contributions yet" /> : contributions.map((c) => (
-                    <tr key={c.id} className="hover:bg-gray-50">
-                      <Td className="font-medium">{c.gift?.title ?? '—'}</Td>
-                      <Td className="text-gray-600">{c.guest?.displayName ?? '—'}</Td>
+                    <tr key={c.id} className="hover:bg-stone-50/50 transition-colors">
+                      <Td className="font-semibold text-stone-800">{c.gift?.title ?? '—'}</Td>
+                      <Td className="text-stone-500">{c.guest?.displayName ?? '—'}</Td>
                       <Td>{c.amount_original?.toLocaleString() ?? '0'} {c.currency_original ?? ''}</Td>
-                      <Td className="font-medium text-amber-700">{c.amount_kzt?.toLocaleString() ?? '0'} KZT</Td>
-                      <Td><span className={`px-2 py-0.5 rounded-full text-xs ${c.status === 'FUNDED' ? 'bg-green-100 text-green-700' : c.status === 'REFUNDED' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>{c.status || '—'}</span></Td>
-                      <Td className="text-gray-400 text-xs">{fmt(c.created_at)}</Td>
+                      <Td className="font-semibold text-amber-700">{c.amount_kzt?.toLocaleString() ?? '0'} KZT</Td>
+                      <Td><span className={c.status === 'FUNDED' ? 'badge-funded' : c.status === 'REFUNDED' ? 'badge-cancelled' : 'badge-pending'}>{c.status || '—'}</span></Td>
+                      <Td className="text-stone-400 text-xs">{fmt(c.created_at)}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -302,24 +321,24 @@ export default function AdminDashboard() {
       {activeTab === 'audit' && (
         <div>
           <div className="flex justify-end mb-4">
-            <button onClick={fetchAuditLogs} className="btn-secondary text-xs">↻ Refresh</button>
+            <button onClick={fetchAuditLogs} className="btn-secondary text-xs py-1.5 px-3">↻ Refresh</button>
           </div>
-          {auditLoading ? <div className="text-center text-gray-400 py-16">Loading...</div> : (
-            <div className="overflow-x-auto rounded-lg border border-gray-200">
+          {auditLoading ? (
+            <div className="flex items-center justify-center py-16 text-stone-400 gap-2 text-sm">Loading...</div>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-stone-100">
               <table className="w-full">
-                <thead className="bg-gray-50">
+                <thead className="bg-stone-50 border-b border-stone-100">
                   <tr><Th>Action</Th><Th>User</Th><Th>Entity</Th><Th>Details</Th><Th>Time</Th></tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-stone-50">
                   {!auditLogs || auditLogs.length === 0 ? <Empty cols={5} text="No audit logs yet" /> : auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-50">
-                      <Td><span className="font-mono text-xs bg-gray-100 px-1.5 py-0.5 rounded">{log.action}</span></Td>
-                      <Td className="text-gray-600">{log.user ? `@${log.user.username}` : '—'}</Td>
-                      <Td className="text-gray-500 text-xs">{log.entity_type}</Td>
-                      <Td className="text-gray-400 text-xs max-w-xs truncate">
-                        {log.metadata ? JSON.stringify(log.metadata) : '—'}
-                      </Td>
-                      <Td className="text-gray-400 text-xs">{fmt(log.created_at)}</Td>
+                    <tr key={log.id} className="hover:bg-stone-50/50 transition-colors">
+                      <Td><span className="font-mono text-xs bg-stone-100 border border-stone-200 px-1.5 py-0.5 rounded-lg">{log.action}</span></Td>
+                      <Td className="text-stone-500">{log.user ? `@${log.user.username}` : '—'}</Td>
+                      <Td className="text-stone-400 text-xs">{log.entity_type}</Td>
+                      <Td className="text-stone-400 text-xs max-w-xs truncate">{log.metadata ? JSON.stringify(log.metadata) : '—'}</Td>
+                      <Td className="text-stone-400 text-xs">{fmt(log.created_at)}</Td>
                     </tr>
                   ))}
                 </tbody>
@@ -332,13 +351,22 @@ export default function AdminDashboard() {
       {/* ── QUEUE ── */}
       {activeTab === 'queue' && (
         <div>
-          <button onClick={() => api.get('/admin/queue-status').then((r) => setQueueStatus(r.data))} className="btn-secondary text-sm mb-4">↻ Refresh</button>
-          {!queueStatus ? <div className="text-center text-gray-400 py-8">Click Refresh to load</div> : (
+          <div className="flex justify-end mb-5">
+            <button onClick={() => api.get('/admin/queue-status').then((r) => setQueueStatus(r.data))} className="btn-secondary text-sm">
+              ↻ Refresh
+            </button>
+          </div>
+          {!queueStatus ? (
+            <div className="card flex flex-col items-center justify-center py-16 text-center">
+              <div className="text-3xl mb-2">⚙️</div>
+              <p className="text-stone-500 text-sm">Click Refresh to load queue status</p>
+            </div>
+          ) : (
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-4">
-              {([['Waiting','waiting','yellow'],['Active','active','blue'],['Completed','completed','green'],['Failed','failed','red'],['Delayed','delayed','gray']] as const).map(([label, key, c]) => (
-                <div key={key} className={`border rounded-xl p-4 text-center bg-${c}-50 border-${c}-200 text-${c}-800`}>
+              {QUEUE_STATS.map(({ key, label, color }) => (
+                <div key={key} className={`border rounded-2xl p-5 text-center ${color}`}>
                   <div className="text-3xl font-bold">{(queueStatus as Record<string, unknown>)[key] ?? '—'}</div>
-                  <div className="text-sm mt-1">{label}</div>
+                  <div className="text-sm mt-1.5 font-medium">{label}</div>
                 </div>
               ))}
             </div>
@@ -350,19 +378,39 @@ export default function AdminDashboard() {
       {activeTab === 'create-admin' && (
         <div className="max-w-md">
           <div className="card">
-            <h3 className="font-semibold text-gray-800 mb-1">Create Administrator</h3>
-            <p className="text-sm text-gray-500 mb-4">Requires <code className="bg-gray-100 px-1 rounded">ADMIN_REGISTRATION_KEY</code> from the server config.</p>
-            <form onSubmit={createAdmin} className="space-y-3">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                <input type="email" className="input-field" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} required placeholder="admin@example.com" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Username *</label>
-                <input className="input-field" value={adminForm.username} onChange={(e) => setAdminForm({ ...adminForm, username: e.target.value })} required minLength={3} placeholder="superadmin" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Password * (min 8 chars)</label>
-                <input type="password" className="input-field" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })} required minLength={8} placeholder="••••••••" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Secret Key *</label>
-                <input type="password" className="input-field" value={adminForm.adminKey} onChange={(e) => setAdminForm({ ...adminForm, adminKey: e.target.value })} required placeholder="ADMIN_REGISTRATION_KEY" /></div>
-              <button type="submit" disabled={adminLoading} className="btn-primary w-full">
-                {adminLoading ? 'Creating...' : '🔐 Create Administrator'}
+            <div className="mb-5">
+              <h3 className="font-bold text-stone-900 text-lg">Create Administrator</h3>
+              <p className="text-sm text-stone-500 mt-1">
+                Requires <code className="bg-stone-100 border border-stone-200 px-1.5 py-0.5 rounded-lg text-xs">ADMIN_REGISTRATION_KEY</code> from the server config.
+              </p>
+            </div>
+            <form onSubmit={createAdmin} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1.5">Email *</label>
+                <input type="email" className="input-field" value={adminForm.email} onChange={(e) => setAdminForm({ ...adminForm, email: e.target.value })} required placeholder="admin@example.com" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1.5">Username *</label>
+                <input className="input-field" value={adminForm.username} onChange={(e) => setAdminForm({ ...adminForm, username: e.target.value })} required minLength={3} placeholder="superadmin" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1.5">Password * <span className="text-stone-400 font-normal">(min 8 chars)</span></label>
+                <input type="password" className="input-field" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })} required minLength={8} placeholder="••••••••" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-stone-700 mb-1.5">Secret Key *</label>
+                <input type="password" className="input-field" value={adminForm.adminKey} onChange={(e) => setAdminForm({ ...adminForm, adminKey: e.target.value })} required placeholder="ADMIN_REGISTRATION_KEY" />
+              </div>
+              <button type="submit" disabled={adminLoading} className="btn-primary w-full py-3">
+                {adminLoading ? (
+                  <span className="flex items-center gap-2">
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Creating...
+                  </span>
+                ) : '🔐 Create Administrator'}
               </button>
             </form>
           </div>

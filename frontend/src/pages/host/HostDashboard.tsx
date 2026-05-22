@@ -27,22 +27,22 @@ function stateBadge(state: string) {
     DELIVERED: 'badge-delivered', CANCELLED: 'badge-cancelled',
   }
   const labels: Record<string, string> = {
-    PENDING: 'Pending', FUNDED: 'Funded', PURCHASED: 'Purchased',
-    DELIVERED: 'Delivered', CANCELLED: 'Cancelled',
+    PENDING: 'Pending', FUNDED: 'Funded', PURCHASED: 'Purchased', DELIVERED: 'Delivered', CANCELLED: 'Cancelled',
   }
   return <span className={map[state] || 'badge-pending'}>{labels[state] || state}</span>
 }
 
+const KINSHIP_LABELS: Record<string, string> = {
+  ata_ana: 'Parents', aga_apa: 'Sibling', jien: 'Niece/Nephew', kuda: 'In-Laws', dos: 'Friend', other: 'Other',
+}
+
 function FamilyTreeNode({ node, depth = 0 }: { node: TreeNode; depth?: number }) {
-  const kinshipLabels: Record<string, string> = {
-    ata_ana: 'Parents', aga_apa: 'Sibling', jien: 'Niece/Nephew', kuda: 'In-Laws', dos: 'Friend', other: 'Other',
-  }
   return (
-    <div style={{ marginLeft: depth * 20 }} className="my-1">
-      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm ${depth === 0 ? 'bg-amber-100 border-amber-400 font-semibold' : 'bg-white border-gray-200'}`}>
+    <div style={{ marginLeft: depth * 24 }} className="my-1">
+      <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border text-sm transition-all ${depth === 0 ? 'bg-amber-50 border-amber-300 font-semibold text-amber-900' : 'bg-white border-stone-200 text-stone-700'}`}>
         <span>{node.display_name}</span>
-        <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{kinshipLabels[node.kinship_label] || node.kinship_label}</span>
-        <span className="text-xs text-amber-600">T{node.tier_rank}</span>
+        <span className="text-xs text-stone-400 bg-stone-100 px-1.5 py-0.5 rounded-lg">{KINSHIP_LABELS[node.kinship_label] || node.kinship_label}</span>
+        <span className="text-xs text-amber-600 font-medium">T{node.tier_rank}</span>
       </div>
       {node.children?.map((child) => <FamilyTreeNode key={child.id} node={child} depth={depth + 1} />)}
     </div>
@@ -51,13 +51,13 @@ function FamilyTreeNode({ node, depth = 0 }: { node: TreeNode; depth?: number })
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg">
-        <div className="flex items-center justify-between p-4 border-b">
-          <h3 className="font-semibold text-gray-800">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl shadow-modal w-full max-w-lg">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-stone-100">
+          <h3 className="font-semibold text-stone-900 text-lg">{title}</h3>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-stone-400 hover:text-stone-600 hover:bg-stone-100 transition-all text-xl leading-none">×</button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="px-6 py-5">{children}</div>
       </div>
     </div>
   )
@@ -247,40 +247,61 @@ export default function HostDashboard() {
     }
   }
 
+  const pct = (g: Gift) => Math.min(100, g.target_amount_kzt > 0 ? (g.current_amount_kzt / g.target_amount_kzt) * 100 : 0)
+
   return (
     <Layout title="Host Dashboard">
       {msg && (
-        <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded-lg text-sm flex justify-between">
+        <div className="mb-5 alert-warning justify-between">
           <span>{msg}</span>
-          <button onClick={() => setMsg('')} className="ml-2 font-bold">×</button>
+          <button onClick={() => setMsg('')} className="ml-2 font-bold text-lg leading-none opacity-60 hover:opacity-100">×</button>
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-800">My Registries</h2>
-        <button onClick={() => setShowCreateReg(true)} className="btn-primary text-sm">+ New Registry</button>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="section-title">My Registries</h2>
+          <p className="text-sm text-stone-500 mt-0.5">{registries.length} {registries.length === 1 ? 'registry' : 'registries'}</p>
+        </div>
+        <button onClick={() => setShowCreateReg(true)} className="btn-primary">
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          New Registry
+        </button>
       </div>
 
-      <div className="flex gap-4 flex-col lg:flex-row">
+      <div className="flex gap-6 flex-col lg:flex-row">
+        {/* Registry list sidebar */}
         <div className="lg:w-64 flex-shrink-0">
           {loading ? (
-            <div className="text-gray-400 text-sm p-4 text-center">Loading...</div>
+            <div className="card flex items-center justify-center py-12 text-stone-400">
+              <svg className="animate-spin w-6 h-6 mr-2" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+              </svg>
+              Loading...
+            </div>
           ) : registries.length === 0 ? (
-            <div className="card text-gray-400 text-sm text-center py-8">No registries yet. Create your first!</div>
+            <div className="card text-center py-10">
+              <div className="text-3xl mb-2">🌸</div>
+              <p className="text-stone-500 text-sm">No registries yet.</p>
+              <p className="text-stone-400 text-xs mt-1">Create your first one!</p>
+            </div>
           ) : (
             <div className="space-y-2">
               {registries.map((reg) => (
                 <div
                   key={reg.id}
                   onClick={() => selectRegistry(reg)}
-                  className={`card cursor-pointer hover:border-amber-300 transition ${selectedReg?.id === reg.id ? 'border-amber-500 ring-2 ring-amber-200' : ''}`}
+                  className={`card-hover ${selectedReg?.id === reg.id ? 'border-amber-400 ring-2 ring-amber-100 shadow-card-hover' : ''}`}
                 >
-                  <div className="font-medium text-gray-800 text-sm">{reg.title}</div>
-                  <div className="text-xs text-gray-400 mt-1">
-                    {new Date(reg.event_date).toLocaleDateString('en-US')}
+                  <div className="font-semibold text-stone-800 text-sm truncate">{reg.title}</div>
+                  <div className="text-xs text-stone-400 mt-1">
+                    {new Date(reg.event_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                   </div>
-                  <div className="text-xs mt-1">
-                    <span className={`px-1.5 py-0.5 rounded ${reg.is_public ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                  <div className="mt-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${reg.is_public ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-500'}`}>
                       {reg.is_public ? 'Public' : 'Private'}
                     </span>
                   </div>
@@ -290,149 +311,172 @@ export default function HostDashboard() {
           )}
         </div>
 
-        <div className="flex-1">
+        {/* Main panel */}
+        <div className="flex-1 min-w-0">
           {!selectedReg ? (
-            <div className="card text-center text-gray-400 py-16">
-              <div className="text-4xl mb-2">👆</div>
-              <div>Select a registry on the left</div>
+            <div className="card flex flex-col items-center justify-center py-20 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center mb-4">
+                <span className="text-3xl">👈</span>
+              </div>
+              <p className="text-stone-600 font-medium">Select a registry</p>
+              <p className="text-stone-400 text-sm mt-1">Choose from the list on the left</p>
             </div>
           ) : (
             <div className="card">
-              <div className="flex items-center justify-between mb-4">
+              {/* Registry header */}
+              <div className="flex items-start justify-between mb-5 gap-4">
                 <div>
-                  <h3 className="font-semibold text-gray-800">{selectedReg.title}</h3>
-                  <div className="text-xs text-gray-400 mt-0.5">
-                    {new Date(selectedReg.event_date).toLocaleDateString('en-US')}
-                    {' · '}
-                    <span className={selectedReg.is_public ? 'text-green-600' : 'text-gray-500'}>
+                  <h3 className="text-lg font-bold text-stone-900">{selectedReg.title}</h3>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="text-xs text-stone-400">
+                      {new Date(selectedReg.event_date).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                    </span>
+                    <span className="text-stone-200">·</span>
+                    <span className={`text-xs font-medium ${selectedReg.is_public ? 'text-emerald-600' : 'text-stone-500'}`}>
                       {selectedReg.is_public ? 'Public' : 'Private'}
                     </span>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  {activeTab === 'gifts' && (
-                    <button onClick={() => setShowCreateGift(true)} className="btn-primary text-sm">+ Gift</button>
-                  )}
-                  {activeTab === 'guests' && (
-                    <button onClick={() => setShowCreateGuest(true)} className="btn-primary text-sm">+ Guest</button>
-                  )}
-                  {activeTab === 'tree' && (
-                    <button onClick={loadFamilyTree} className="btn-secondary text-sm">Refresh Tree</button>
-                  )}
-                  <button onClick={() => openEditReg(selectedReg)} className="btn-secondary text-sm">✏️ Edit</button>
-                  <button onClick={deleteRegistry} className="text-sm px-3 py-1.5 rounded border border-red-200 text-red-600 hover:bg-red-50 transition">🗑 Delete</button>
+                <div className="flex gap-2 flex-shrink-0 flex-wrap justify-end">
+                  <button onClick={() => openEditReg(selectedReg)} className="btn-secondary text-xs py-1.5 px-3">
+                    Edit
+                  </button>
+                  <button onClick={deleteRegistry} className="text-xs px-3 py-1.5 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition-all font-semibold">
+                    Delete
+                  </button>
                 </div>
               </div>
 
-              <div className="flex border-b mb-4 gap-1">
+              {/* Action buttons */}
+              <div className="flex gap-2 mb-5 flex-wrap">
+                {activeTab === 'gifts' && (
+                  <button onClick={() => setShowCreateGift(true)} className="btn-primary text-xs py-2 px-3">+ Add Gift</button>
+                )}
+                {activeTab === 'guests' && (
+                  <button onClick={() => setShowCreateGuest(true)} className="btn-primary text-xs py-2 px-3">+ Add Guest</button>
+                )}
+                {activeTab === 'tree' && (
+                  <button onClick={loadFamilyTree} className="btn-secondary text-xs py-2 px-3">Refresh Tree</button>
+                )}
+              </div>
+
+              {/* Tabs */}
+              <div className="flex border-b border-stone-100 mb-5 gap-0 -mx-1">
                 {(['gifts', 'guests', 'tree'] as const).map((tab) => (
                   <button
                     key={tab}
                     onClick={() => { setActiveTab(tab); if (tab === 'tree') loadFamilyTree() }}
-                    className={`px-4 py-2 text-sm font-medium rounded-t transition ${activeTab === tab ? 'border-b-2 border-amber-500 text-amber-700' : 'text-gray-500 hover:text-gray-700'}`}
+                    className={tab === activeTab ? 'tab-btn-active' : 'tab-btn-inactive'}
                   >
                     {tab === 'gifts' ? `🎁 Gifts (${gifts.length})` : tab === 'guests' ? `👥 Guests (${guests.length})` : '🌳 Family Tree'}
                   </button>
                 ))}
               </div>
 
+              {/* Gifts tab */}
               {activeTab === 'gifts' && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {gifts.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">No gifts yet. Add your first!</div>
-                  ) : (
-                    gifts.map((gift) => (
-                      <div key={gift.id} className="border rounded-lg overflow-hidden">
-                        <div className="p-3 flex items-center justify-between bg-gray-50">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="font-medium text-sm">{gift.title}</span>
-                              {gift.is_fragile && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 rounded">⚠️ Fragile</span>}
+                    <div className="text-center py-12 text-stone-400">
+                      <div className="text-3xl mb-2">🎁</div>
+                      <p className="text-sm">No gifts yet. Add your first!</p>
+                    </div>
+                  ) : gifts.map((gift) => (
+                    <div key={gift.id} className="border border-stone-100 rounded-2xl overflow-hidden">
+                      <div className="p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-stone-800 text-sm">{gift.title}</span>
+                              {gift.is_fragile && (
+                                <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-lg">⚠️ Fragile</span>
+                              )}
+                              {stateBadge(gift.state)}
                             </div>
-                            <div className="text-xs text-gray-500 mt-0.5">
-                              {gift.current_amount_kzt.toLocaleString()} / {gift.target_amount_kzt.toLocaleString()} KZT
-                              {' · '}Tier {gift.required_tier_rank}
+                            <div className="text-xs text-stone-400 mt-1">
+                              {gift.current_amount_kzt.toLocaleString()} / {gift.target_amount_kzt.toLocaleString()} KZT · Tier {gift.required_tier_rank}
+                            </div>
+                            <div className="mt-2">
+                              <div className="progress-track h-1.5">
+                                <div className="progress-fill h-1.5" style={{ width: `${pct(gift)}%` }} />
+                              </div>
+                              <div className="text-right text-xs text-stone-400 mt-0.5">{Math.round(pct(gift))}%</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {stateBadge(gift.state)}
-                            <button onClick={() => loadContributions(gift.id)} className="text-xs text-blue-600 hover:underline">
-                              Contributions
+                          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                            <button onClick={() => loadContributions(gift.id)} className="text-xs text-blue-600 hover:text-blue-700 font-medium hover:underline">
+                              {expandedGift === gift.id ? 'Hide' : 'Contributions'}
                             </button>
                             {['PENDING', 'FUNDED'].includes(gift.state) && (
-                              <button onClick={() => cancelGift(gift.id)} className="text-xs text-orange-600 hover:underline">
+                              <button onClick={() => cancelGift(gift.id)} className="text-xs text-stone-400 hover:text-red-600 font-medium hover:underline">
                                 Cancel
                               </button>
                             )}
                           </div>
                         </div>
-                        <div className="px-3 pb-2 bg-gray-50">
-                          <div className="w-full bg-gray-200 rounded-full h-1.5">
-                            <div
-                              className="bg-amber-500 h-1.5 rounded-full transition-all"
-                              style={{ width: `${Math.min(100, (gift.current_amount_kzt / gift.target_amount_kzt) * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                        {expandedGift === gift.id && (
-                          <div className="p-3 border-t bg-white">
-                            <p className="text-xs font-medium text-gray-600 mb-2">Contributions:</p>
-                            {!contributions[gift.id]?.length ? (
-                              <p className="text-xs text-gray-400">No contributions</p>
-                            ) : (
-                              contributions[gift.id].map((c) => (
-                                <div key={c.id} className="flex justify-between text-xs text-gray-600 py-1 border-b last:border-0">
-                                  <span>{c.amount_original.toLocaleString()} {c.currency_original}</span>
-                                  <span>{c.amount_kzt.toLocaleString()} KZT</span>
-                                  <span className={`px-1.5 py-0.5 rounded ${c.status === 'FUNDED' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                                    {c.status}
-                                  </span>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        )}
                       </div>
-                    ))
-                  )}
+                      {expandedGift === gift.id && (
+                        <div className="border-t border-stone-100 bg-stone-50 px-4 py-3">
+                          <p className="text-xs font-semibold text-stone-500 mb-2 uppercase tracking-wide">Contributions</p>
+                          {!contributions[gift.id]?.length ? (
+                            <p className="text-xs text-stone-400">No contributions yet</p>
+                          ) : contributions[gift.id].map((c) => (
+                            <div key={c.id} className="flex justify-between items-center text-xs py-1.5 border-b border-stone-100 last:border-0">
+                              <span className="text-stone-700 font-medium">{c.amount_original.toLocaleString()} {c.currency_original}</span>
+                              <span className="text-stone-500">= {c.amount_kzt.toLocaleString()} KZT</span>
+                              <span className={c.status === 'FUNDED' ? 'badge-funded' : 'badge-cancelled'}>{c.status}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
 
+              {/* Guests tab */}
               {activeTab === 'guests' && (
                 <div className="space-y-2">
                   {guests.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">No guests yet. Add your first!</div>
-                  ) : (
-                    guests.map((guest) => (
-                      <div key={guest.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <span className="font-medium text-sm">{guest.display_name}</span>
-                          <span className="ml-2 text-xs text-gray-500">{guest.kinship_label}</span>
-                          <span className="ml-2 text-xs text-amber-600">Tier {guest.tier_rank}</span>
-                          {guest.parent_id && <span className="ml-2 text-xs text-blue-500">↳ child node</span>}
+                    <div className="text-center py-12 text-stone-400">
+                      <div className="text-3xl mb-2">👥</div>
+                      <p className="text-sm">No guests yet. Add your first!</p>
+                    </div>
+                  ) : guests.map((guest) => (
+                    <div key={guest.id} className="flex items-center justify-between px-4 py-3 rounded-xl border border-stone-100 hover:border-stone-200 transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-700 font-bold text-sm flex-shrink-0">
+                          {guest.display_name[0]?.toUpperCase()}
                         </div>
-                        <button onClick={() => deleteGuest(guest.id)} className="text-xs text-red-500 hover:underline">
-                          Remove
-                        </button>
+                        <div>
+                          <span className="font-medium text-sm text-stone-800">{guest.display_name}</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-stone-400">{KINSHIP_LABELS[guest.kinship_label] || guest.kinship_label}</span>
+                            <span className="text-xs text-amber-600 font-medium">Tier {guest.tier_rank}</span>
+                            {guest.parent_id && <span className="text-xs text-blue-400">↳ child</span>}
+                          </div>
+                        </div>
                       </div>
-                    ))
-                  )}
+                      <button onClick={() => deleteGuest(guest.id)} className="text-xs text-stone-300 hover:text-red-500 font-medium transition-colors">
+                        Remove
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
 
+              {/* Family Tree tab */}
               {activeTab === 'tree' && (
                 <div>
                   {familyTreeRoots.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">
-                      <div className="text-3xl mb-2">🌳</div>
-                      <p>Click "Refresh Tree" to build</p>
+                    <div className="text-center py-12 text-stone-400">
+                      <div className="text-4xl mb-3">🌳</div>
+                      <p className="text-sm font-medium">Click "Refresh Tree" to build</p>
                     </div>
                   ) : (
                     <div className="overflow-auto max-h-96 p-2 space-y-4">
                       {familyTreeRoots.map((root: TreeNode) => (
-                        <div key={root.id}>
-                          <FamilyTreeNode node={root} />
-                        </div>
+                        <FamilyTreeNode key={root.id} node={root} />
                       ))}
                     </div>
                   )}
@@ -443,22 +487,23 @@ export default function HostDashboard() {
         </div>
       </div>
 
+      {/* Create Registry Modal */}
       {showCreateReg && (
-        <Modal title="Create Registry" onClose={() => setShowCreateReg(false)}>
-          <form onSubmit={createRegistry} className="space-y-3">
+        <Modal title="New Registry" onClose={() => setShowCreateReg(false)}>
+          <form onSubmit={createRegistry} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Title *</label>
               <input className="input-field" value={regForm.title} onChange={(e) => setRegForm({ ...regForm, title: e.target.value })} required minLength={3} placeholder="e.g. Aigerim & Aset Wedding" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Event Date *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Event Date *</label>
               <input type="date" className="input-field" value={regForm.event_date} onChange={(e) => setRegForm({ ...regForm, event_date: e.target.value })} required />
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={regForm.is_public} onChange={(e) => setRegForm({ ...regForm, is_public: e.target.checked })} className="rounded" />
-              Public registry
+            <label className="flex items-center gap-2.5 text-sm text-stone-700 cursor-pointer">
+              <input type="checkbox" checked={regForm.is_public} onChange={(e) => setRegForm({ ...regForm, is_public: e.target.checked })} className="rounded w-4 h-4 accent-amber-600" />
+              Public registry (visible to all)
             </label>
-            <div className="flex gap-2 pt-2">
+            <div className="flex gap-3 pt-2">
               <button type="submit" className="btn-primary flex-1">Create</button>
               <button type="button" onClick={() => setShowCreateReg(false)} className="btn-secondary flex-1">Cancel</button>
             </div>
@@ -466,65 +511,68 @@ export default function HostDashboard() {
         </Modal>
       )}
 
+      {/* Create Gift Modal */}
       {showCreateGift && (
         <Modal title="Add Gift" onClose={() => setShowCreateGift(false)}>
-          <form onSubmit={createGift} className="space-y-3">
+          <form onSubmit={createGift} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Title *</label>
               <input className="input-field" value={giftForm.title} onChange={(e) => setGiftForm({ ...giftForm, title: e.target.value })} required placeholder="e.g. Dinner Set" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Target Amount (KZT) *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Target Amount (KZT) *</label>
               <input type="number" className="input-field" value={giftForm.target_amount_kzt} onChange={(e) => setGiftForm({ ...giftForm, target_amount_kzt: e.target.value })} required min={1000} placeholder="100000" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Required Tier (0 = all)</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Required Tier <span className="text-stone-400 font-normal">(0 = everyone)</span></label>
               <input type="number" className="input-field" value={giftForm.required_tier_rank} onChange={(e) => setGiftForm({ ...giftForm, required_tier_rank: Number(e.target.value) })} min={0} max={5} />
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={giftForm.is_fragile} onChange={(e) => setGiftForm({ ...giftForm, is_fragile: e.target.checked })} />
-              Fragile item
+            <label className="flex items-center gap-2.5 text-sm text-stone-700 cursor-pointer">
+              <input type="checkbox" checked={giftForm.is_fragile} onChange={(e) => setGiftForm({ ...giftForm, is_fragile: e.target.checked })} className="rounded w-4 h-4 accent-amber-600" />
+              Fragile item (requires careful handling)
             </label>
-            <div className="flex gap-2 pt-2">
-              <button type="submit" className="btn-primary flex-1">Add</button>
+            <div className="flex gap-3 pt-2">
+              <button type="submit" className="btn-primary flex-1">Add Gift</button>
               <button type="button" onClick={() => setShowCreateGift(false)} className="btn-secondary flex-1">Cancel</button>
             </div>
           </form>
         </Modal>
       )}
 
+      {/* Edit Registry Modal */}
       {showEditReg && selectedReg && (
         <Modal title="Edit Registry" onClose={() => setShowEditReg(false)}>
-          <form onSubmit={saveEditReg} className="space-y-3">
+          <form onSubmit={saveEditReg} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Title *</label>
               <input className="input-field" value={editRegForm.title} onChange={(e: ChangeEvent<HTMLInputElement>) => setEditRegForm({ ...editRegForm, title: e.target.value })} required minLength={3} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Event Date *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Event Date *</label>
               <input type="date" className="input-field" value={editRegForm.event_date} onChange={(e: ChangeEvent<HTMLInputElement>) => setEditRegForm({ ...editRegForm, event_date: e.target.value })} required />
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" checked={editRegForm.is_public} onChange={(e: ChangeEvent<HTMLInputElement>) => setEditRegForm({ ...editRegForm, is_public: e.target.checked })} className="rounded" />
+            <label className="flex items-center gap-2.5 text-sm text-stone-700 cursor-pointer">
+              <input type="checkbox" checked={editRegForm.is_public} onChange={(e: ChangeEvent<HTMLInputElement>) => setEditRegForm({ ...editRegForm, is_public: e.target.checked })} className="rounded w-4 h-4 accent-amber-600" />
               Public registry
             </label>
-            <div className="flex gap-2 pt-2">
-              <button type="submit" className="btn-primary flex-1">Save</button>
+            <div className="flex gap-3 pt-2">
+              <button type="submit" className="btn-primary flex-1">Save Changes</button>
               <button type="button" onClick={() => setShowEditReg(false)} className="btn-secondary flex-1">Cancel</button>
             </div>
           </form>
         </Modal>
       )}
 
+      {/* Add Guest Modal */}
       {showCreateGuest && (
         <Modal title="Add Guest" onClose={() => { setShowCreateGuest(false); setUserLookup(null); setUserLookupInput(''); setUserLookupError('') }}>
-          <form onSubmit={createGuest} className="space-y-3">
+          <form onSubmit={createGuest} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Name *</label>
               <input className="input-field" value={guestForm.display_name} onChange={(e) => setGuestForm({ ...guestForm, display_name: e.target.value })} required placeholder="e.g. Aigerim Seitkali" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Kinship *</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Kinship *</label>
               <select className="input-field" value={guestForm.kinship_label} onChange={(e) => setGuestForm({ ...guestForm, kinship_label: e.target.value })}>
                 <option value="ata_ana">Parents (ata_ana)</option>
                 <option value="aga_apa">Sibling (aga_apa)</option>
@@ -535,20 +583,19 @@ export default function HostDashboard() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Tier (0 = closest, 5 = most distant)</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Tier <span className="text-stone-400 font-normal">(0 = closest, 5 = most distant)</span></label>
               <input type="number" className="input-field" value={guestForm.tier_rank} onChange={(e) => setGuestForm({ ...guestForm, tier_rank: Number(e.target.value) })} min={0} max={5} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Guest (optional)</label>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">Parent Guest <span className="text-stone-400 font-normal">(optional)</span></label>
               <select className="input-field" value={guestForm.parent_id} onChange={(e) => setGuestForm({ ...guestForm, parent_id: e.target.value })}>
                 <option value="">— no parent —</option>
                 {guests.map((g) => <option key={g.id} value={g.id}>{g.display_name}</option>)}
               </select>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Link User Account <span className="text-gray-400 font-normal">(optional — lets them contribute)</span>
+              <label className="block text-sm font-medium text-stone-700 mb-1.5">
+                Link User Account <span className="text-stone-400 font-normal">(optional)</span>
               </label>
               <div className="flex gap-2">
                 <input
@@ -558,21 +605,20 @@ export default function HostDashboard() {
                   placeholder="username"
                   onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupUser() } }}
                 />
-                <button type="button" onClick={lookupUser} className="btn-secondary text-sm px-3">Find</button>
+                <button type="button" onClick={lookupUser} className="btn-secondary px-3">Find</button>
               </div>
               {userLookup && (
-                <div className="mt-1.5 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
-                  <span>✓</span>
-                  <span><strong>@{userLookup.username}</strong> ({userLookup.role}) — will be linked</span>
+                <div className="mt-2 alert-success">
+                  <svg className="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span><strong>@{userLookup.username}</strong> ({userLookup.role}) will be linked</span>
                 </div>
               )}
-              {userLookupError && (
-                <p className="mt-1 text-xs text-red-600">{userLookupError}</p>
-              )}
+              {userLookupError && <p className="mt-1.5 text-xs text-red-600">{userLookupError}</p>}
             </div>
-
-            <div className="flex gap-2 pt-2">
-              <button type="submit" className="btn-primary flex-1">Add</button>
+            <div className="flex gap-3 pt-2">
+              <button type="submit" className="btn-primary flex-1">Add Guest</button>
               <button type="button" onClick={() => { setShowCreateGuest(false); setUserLookup(null); setUserLookupInput(''); setUserLookupError('') }} className="btn-secondary flex-1">Cancel</button>
             </div>
           </form>
