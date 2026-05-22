@@ -10,9 +10,12 @@ RUN npm install
 COPY . .
 RUN npm run build
 
-FROM nginx:alpine
+# Use plain alpine — nginx:alpine bakes in EXPOSE 80 which confuses Dokku's port detection
+FROM alpine:3.19
+RUN apk add --no-cache nginx && mkdir -p /run/nginx /var/log/nginx
+
 COPY --from=builder /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx.conf /etc/nginx/nginx.conf
 
 EXPOSE 5000
 CMD ["nginx", "-g", "daemon off;"]
