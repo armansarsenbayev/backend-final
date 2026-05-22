@@ -45,87 +45,89 @@ export default function CourierDashboard() {
   return (
     <Layout title="Courier Dashboard">
       {msg && (
-        <div className={`mb-4 px-4 py-2 rounded-lg text-sm flex justify-between ${msg.startsWith('✅') ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
-          <span>{msg}</span><button onClick={() => setMsg('')} className="font-bold ml-2">×</button>
+        <div className={`mb-5 ${msg.startsWith('✅') ? 'alert-success' : 'alert-error'} justify-between`}>
+          <span>{msg}</span>
+          <button onClick={() => setMsg('')} className="font-bold ml-2 text-lg leading-none opacity-60 hover:opacity-100">×</button>
         </div>
       )}
 
-      <div className="flex border-b mb-6 gap-1">
-        <button
-          onClick={() => setActiveTab('available')}
-          className={`px-5 py-2.5 text-sm font-medium transition ${activeTab === 'available' ? 'border-b-2 border-amber-500 text-amber-700' : 'text-gray-500'}`}
-        >
+      <div className="flex border-b border-stone-100 mb-6 gap-0">
+        <button onClick={() => setActiveTab('available')} className={activeTab === 'available' ? 'tab-btn-active' : 'tab-btn-inactive'}>
           🚚 Ready for Delivery ({purchased.length})
         </button>
-        <button
-          onClick={() => setActiveTab('my')}
-          className={`px-5 py-2.5 text-sm font-medium transition ${activeTab === 'my' ? 'border-b-2 border-amber-500 text-amber-700' : 'text-gray-500'}`}
-        >
+        <button onClick={() => setActiveTab('my')} className={activeTab === 'my' ? 'tab-btn-active' : 'tab-btn-inactive'}>
           ✅ My Deliveries ({myDeliveries.length})
+        </button>
+        <button onClick={fetchData} className="ml-auto btn-secondary text-xs py-1.5 px-3 mb-px">
+          ↻ Refresh
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center text-gray-400 py-16">Loading...</div>
+        <div className="flex items-center justify-center py-20 text-stone-400 gap-2">
+          <svg className="animate-spin w-5 h-5" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Loading...
+        </div>
       ) : (
         <>
           {activeTab === 'available' && (
-            <div>
-              {purchased.length === 0 ? (
-                <div className="card text-center text-gray-400 py-16">
-                  <div className="text-4xl mb-2">🚚</div>
-                  <p>No gifts ready for delivery</p>
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {purchased.map((gift) => (
-                    <div key={gift.id} className="card hover:shadow-md transition">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-gray-800">{gift.title}</h3>
-                        {gift.is_fragile && (
-                          <span className="text-xs bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">
-                            ⚠️ FRAGILE
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm text-gray-600 mb-3">
-                        {gift.current_amount_kzt.toLocaleString()} KZT
-                      </div>
-                      <div className="flex items-center justify-between">
-                        {stateBadge(gift.state)}
-                        <button onClick={() => confirmDelivery(gift.id)} className="btn-primary text-sm">
-                          🏠 Mark Delivered
-                        </button>
-                      </div>
+            purchased.length === 0 ? (
+              <div className="card flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-teal-50 flex items-center justify-center mb-4 text-3xl">🚚</div>
+                <p className="text-stone-600 font-medium">No gifts ready for delivery</p>
+                <p className="text-stone-400 text-sm mt-1">Check back when vendors confirm purchases</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {purchased.map((gift) => (
+                  <div key={gift.id} className="card hover:shadow-card-hover transition-all duration-200">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-semibold text-stone-800 text-sm leading-tight">{gift.title}</h3>
+                      {gift.is_fragile && (
+                        <span className="text-xs bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5 rounded-lg ml-2 flex-shrink-0 font-semibold">
+                          ⚠️ FRAGILE
+                        </span>
+                      )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <div className="text-sm text-stone-600 mb-4">
+                      {gift.current_amount_kzt.toLocaleString()} KZT
+                    </div>
+                    <div className="flex items-center justify-between pt-3 border-t border-stone-50">
+                      {stateBadge(gift.state)}
+                      <button onClick={() => confirmDelivery(gift.id)} className="btn-primary text-xs py-2 px-3">
+                        🏠 Delivered
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           )}
 
           {activeTab === 'my' && (
-            <div>
-              {myDeliveries.length === 0 ? (
-                <div className="card text-center text-gray-400 py-16">
-                  <div className="text-4xl mb-2">📋</div>
-                  <p>No completed deliveries</p>
-                </div>
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {myDeliveries.map((gift) => (
-                    <div key={gift.id} className="card">
-                      <div className="flex items-start justify-between mb-2">
-                        <h3 className="font-semibold text-gray-800">{gift.title}</h3>
-                        {gift.is_fragile && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">⚠️ Fragile</span>}
-                      </div>
-                      <div className="text-sm text-gray-600 mb-2">{gift.current_amount_kzt.toLocaleString()} KZT</div>
-                      {stateBadge(gift.state)}
+            myDeliveries.length === 0 ? (
+              <div className="card flex flex-col items-center justify-center py-20 text-center">
+                <div className="w-16 h-16 rounded-2xl bg-violet-50 flex items-center justify-center mb-4 text-3xl">📋</div>
+                <p className="text-stone-600 font-medium">No completed deliveries</p>
+                <p className="text-stone-400 text-sm mt-1">Your delivery history will appear here</p>
+              </div>
+            ) : (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {myDeliveries.map((gift) => (
+                  <div key={gift.id} className="card">
+                    <div className="flex items-start justify-between mb-3">
+                      <h3 className="font-semibold text-stone-800 text-sm">{gift.title}</h3>
+                      {gift.is_fragile && <span className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-lg ml-2">⚠️ Fragile</span>}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    <div className="text-sm text-stone-600 mb-3">{gift.current_amount_kzt.toLocaleString()} KZT</div>
+                    {stateBadge(gift.state)}
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </>
       )}
