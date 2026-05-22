@@ -15,10 +15,10 @@ export default function ForgotPassword() {
     setLoading(true)
     try {
       const res = await api.post('/auth/forgot-password', { email })
-      setMessage(res.data.message || 'Если email существует, ссылка отправлена')
+      setMessage(res.data.message || 'If this email exists, a reset link has been sent')
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } }
-      setError(e?.response?.data?.message || 'Ошибка запроса')
+      setError(e?.response?.data?.message || 'Request failed')
     } finally {
       setLoading(false)
     }
@@ -29,8 +29,8 @@ export default function ForgotPassword() {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-6">
           <div className="text-5xl mb-2">🔑</div>
-          <h1 className="text-2xl font-bold text-gray-800">Сброс пароля</h1>
-          <p className="text-gray-500 text-sm mt-1">Введите email, и мы отправим ссылку для сброса</p>
+          <h1 className="text-2xl font-bold text-gray-800">Reset Password</h1>
+          <p className="text-gray-500 text-sm mt-1">Enter your email and we will send you a reset link</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -43,12 +43,12 @@ export default function ForgotPassword() {
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
-            {loading ? 'Отправка...' : 'Отправить ссылку'}
+            {loading ? 'Sending...' : 'Send Reset Link'}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm">
-          <Link to="/login" className="text-amber-600 hover:underline">← Назад к входу</Link>
+          <Link to="/login" className="text-amber-600 hover:underline">← Back to sign in</Link>
         </p>
       </div>
     </div>

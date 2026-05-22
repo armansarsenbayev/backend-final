@@ -14,22 +14,22 @@ function stateBadge(state: string) {
     DELIVERED: 'badge-delivered', CANCELLED: 'badge-cancelled',
   }
   const labels: Record<string, string> = {
-    PENDING: 'Ожидание', FUNDED: 'Собрано', PURCHASED: 'Куплен',
-    DELIVERED: 'Доставлен', CANCELLED: 'Отменён',
+    PENDING: 'Pending', FUNDED: 'Funded', PURCHASED: 'Purchased',
+    DELIVERED: 'Delivered', CANCELLED: 'Cancelled',
   }
   return <span className={map[state] || 'badge-pending'}>{labels[state] || state}</span>
 }
 
 function FamilyTreeNode({ node, depth = 0 }: { node: TreeNode; depth?: number }) {
   const kinshipLabels: Record<string, string> = {
-    ata_ana: 'Ата/Ана', aga_apa: 'Аға/Апа', jien: 'Жиен', kuda: 'Құда', dos: 'Дос', other: 'Басқа',
+    ata_ana: 'Parents', aga_apa: 'Sibling', jien: 'Niece/Nephew', kuda: 'In-Laws', dos: 'Friend', other: 'Other',
   }
   return (
     <div style={{ marginLeft: depth * 20 }} className="my-1">
       <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border text-sm ${depth === 0 ? 'bg-amber-100 border-amber-400 font-semibold' : 'bg-white border-gray-200'}`}>
         <span>{node.display_name}</span>
         <span className="text-xs text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">{kinshipLabels[node.kinship_label] || node.kinship_label}</span>
-        <span className="text-xs text-amber-600">Т{node.tier_rank}</span>
+        <span className="text-xs text-amber-600">T{node.tier_rank}</span>
       </div>
       {node.children?.map((child) => <FamilyTreeNode key={child.id} node={child} depth={depth + 1} />)}
     </div>
@@ -94,7 +94,7 @@ export default function HostDashboard() {
   }
 
   const loadFamilyTree = async () => {
-    if (!guests.length) { setMsg('Нет гостей для построения дерева'); return }
+    if (!guests.length) { setMsg('No guests to build the tree'); return }
     const root = guests.find((g) => !g.parent_id) || guests[0]
     const res = await api.get(`/guests/${root.id}/family-tree`)
     setFamilyTreeRoot(res.data)
@@ -109,7 +109,7 @@ export default function HostDashboard() {
       setRegForm({ title: '', event_date: '', is_public: true })
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } }
-      setMsg(e?.response?.data?.message || 'Ошибка создания реестра')
+      setMsg(e?.response?.data?.message || 'Failed to create registry')
     }
   }
 
@@ -125,29 +125,29 @@ export default function HostDashboard() {
       setGiftForm({ title: '', target_amount_kzt: '', required_tier_rank: 0, is_fragile: false })
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } }
-      setMsg(e?.response?.data?.message || 'Ошибка создания подарка')
+      setMsg(e?.response?.data?.message || 'Failed to add gift')
     }
   }
 
   const cancelGift = async (giftId: string) => {
-    if (!confirm('Отменить подарок?')) return
+    if (!confirm('Cancel this gift?')) return
     try {
       const res = await api.patch(`/gifts/${giftId}/cancel`)
       setGifts((prev) => prev.map((g) => (g.id === giftId ? res.data : g)))
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } }
-      setMsg(e?.response?.data?.message || 'Ошибка отмены')
+      setMsg(e?.response?.data?.message || 'Cancellation failed')
     }
   }
 
   const deleteGift = async (giftId: string) => {
-    if (!confirm('Удалить подарок?') || !selectedReg) return
+    if (!confirm('Delete this gift?') || !selectedReg) return
     try {
       await api.delete(`/registries/${selectedReg.id}/gifts/${giftId}`)
       setGifts((prev) => prev.filter((g) => g.id !== giftId))
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } }
-      setMsg(e?.response?.data?.message || 'Ошибка удаления')
+      setMsg(e?.response?.data?.message || 'Deletion failed')
     }
   }
 
@@ -162,23 +162,23 @@ export default function HostDashboard() {
       setGuestForm({ display_name: '', kinship_label: 'other', tier_rank: 0, parent_id: '' })
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } }
-      setMsg(e?.response?.data?.message || 'Ошибка добавления гостя')
+      setMsg(e?.response?.data?.message || 'Failed to add guest')
     }
   }
 
   const deleteGuest = async (guestId: string) => {
-    if (!confirm('Удалить гостя?') || !selectedReg) return
+    if (!confirm('Remove this guest?') || !selectedReg) return
     try {
       await api.delete(`/registries/${selectedReg.id}/guests/${guestId}`)
       setGuests((prev) => prev.filter((g) => g.id !== guestId))
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } }
-      setMsg(e?.response?.data?.message || 'Ошибка удаления')
+      setMsg(e?.response?.data?.message || 'Deletion failed')
     }
   }
 
   return (
-    <Layout title="Панель хозяина">
+    <Layout title="Host Dashboard">
       {msg && (
         <div className="mb-4 bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded-lg text-sm flex justify-between">
           <span>{msg}</span>
@@ -187,16 +187,16 @@ export default function HostDashboard() {
       )}
 
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-800">Мои реестры</h2>
-        <button onClick={() => setShowCreateReg(true)} className="btn-primary text-sm">+ Создать реестр</button>
+        <h2 className="text-lg font-semibold text-gray-800">My Registries</h2>
+        <button onClick={() => setShowCreateReg(true)} className="btn-primary text-sm">+ New Registry</button>
       </div>
 
       <div className="flex gap-4 flex-col lg:flex-row">
         <div className="lg:w-64 flex-shrink-0">
           {loading ? (
-            <div className="text-gray-400 text-sm p-4 text-center">Загрузка...</div>
+            <div className="text-gray-400 text-sm p-4 text-center">Loading...</div>
           ) : registries.length === 0 ? (
-            <div className="card text-gray-400 text-sm text-center py-8">Нет реестров. Создайте первый!</div>
+            <div className="card text-gray-400 text-sm text-center py-8">No registries yet. Create your first!</div>
           ) : (
             <div className="space-y-2">
               {registries.map((reg) => (
@@ -207,11 +207,11 @@ export default function HostDashboard() {
                 >
                   <div className="font-medium text-gray-800 text-sm">{reg.title}</div>
                   <div className="text-xs text-gray-400 mt-1">
-                    {new Date(reg.event_date).toLocaleDateString('ru-RU')}
+                    {new Date(reg.event_date).toLocaleDateString('en-US')}
                   </div>
                   <div className="text-xs mt-1">
                     <span className={`px-1.5 py-0.5 rounded ${reg.is_public ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
-                      {reg.is_public ? 'Публичный' : 'Приватный'}
+                      {reg.is_public ? 'Public' : 'Private'}
                     </span>
                   </div>
                 </div>
@@ -224,7 +224,7 @@ export default function HostDashboard() {
           {!selectedReg ? (
             <div className="card text-center text-gray-400 py-16">
               <div className="text-4xl mb-2">👆</div>
-              <div>Выберите реестр слева</div>
+              <div>Select a registry on the left</div>
             </div>
           ) : (
             <div className="card">
@@ -232,13 +232,13 @@ export default function HostDashboard() {
                 <h3 className="font-semibold text-gray-800">{selectedReg.title}</h3>
                 <div className="flex gap-2">
                   {activeTab === 'gifts' && (
-                    <button onClick={() => setShowCreateGift(true)} className="btn-primary text-sm">+ Подарок</button>
+                    <button onClick={() => setShowCreateGift(true)} className="btn-primary text-sm">+ Gift</button>
                   )}
                   {activeTab === 'guests' && (
-                    <button onClick={() => setShowCreateGuest(true)} className="btn-primary text-sm">+ Гость</button>
+                    <button onClick={() => setShowCreateGuest(true)} className="btn-primary text-sm">+ Guest</button>
                   )}
                   {activeTab === 'tree' && (
-                    <button onClick={loadFamilyTree} className="btn-secondary text-sm">Обновить дерево</button>
+                    <button onClick={loadFamilyTree} className="btn-secondary text-sm">Refresh Tree</button>
                   )}
                 </div>
               </div>
@@ -250,7 +250,7 @@ export default function HostDashboard() {
                     onClick={() => { setActiveTab(tab); if (tab === 'tree') loadFamilyTree() }}
                     className={`px-4 py-2 text-sm font-medium rounded-t transition ${activeTab === tab ? 'border-b-2 border-amber-500 text-amber-700' : 'text-gray-500 hover:text-gray-700'}`}
                   >
-                    {tab === 'gifts' ? `🎁 Подарки (${gifts.length})` : tab === 'guests' ? `👥 Гости (${guests.length})` : '🌳 Семейное дерево'}
+                    {tab === 'gifts' ? `🎁 Gifts (${gifts.length})` : tab === 'guests' ? `👥 Guests (${guests.length})` : '🌳 Family Tree'}
                   </button>
                 ))}
               </div>
@@ -258,7 +258,7 @@ export default function HostDashboard() {
               {activeTab === 'gifts' && (
                 <div className="space-y-2">
                   {gifts.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">Нет подарков. Добавьте первый!</div>
+                    <div className="text-center text-gray-400 py-8">No gifts yet. Add your first!</div>
                   ) : (
                     gifts.map((gift) => (
                       <div key={gift.id} className="border rounded-lg overflow-hidden">
@@ -266,26 +266,26 @@ export default function HostDashboard() {
                           <div className="flex-1">
                             <div className="flex items-center gap-2">
                               <span className="font-medium text-sm">{gift.title}</span>
-                              {gift.is_fragile && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 rounded">⚠️ Хрупкий</span>}
+                              {gift.is_fragile && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 rounded">⚠️ Fragile</span>}
                             </div>
                             <div className="text-xs text-gray-500 mt-0.5">
                               {gift.current_amount_kzt.toLocaleString()} / {gift.target_amount_kzt.toLocaleString()} KZT
-                              {' · '}Тир {gift.required_tier_rank}
+                              {' · '}Tier {gift.required_tier_rank}
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
                             {stateBadge(gift.state)}
                             <button onClick={() => loadContributions(gift.id)} className="text-xs text-blue-600 hover:underline">
-                              Вклады
+                              Contributions
                             </button>
                             {['PENDING', 'FUNDED'].includes(gift.state) && (
                               <button onClick={() => cancelGift(gift.id)} className="text-xs text-orange-600 hover:underline">
-                                Отменить
+                                Cancel
                               </button>
                             )}
                             {gift.state === 'PENDING' && (
                               <button onClick={() => deleteGift(gift.id)} className="text-xs text-red-600 hover:underline">
-                                Удалить
+                                Delete
                               </button>
                             )}
                           </div>
@@ -300,9 +300,9 @@ export default function HostDashboard() {
                         </div>
                         {expandedGift === gift.id && (
                           <div className="p-3 border-t bg-white">
-                            <p className="text-xs font-medium text-gray-600 mb-2">Вклады:</p>
+                            <p className="text-xs font-medium text-gray-600 mb-2">Contributions:</p>
                             {!contributions[gift.id]?.length ? (
-                              <p className="text-xs text-gray-400">Нет вкладов</p>
+                              <p className="text-xs text-gray-400">No contributions</p>
                             ) : (
                               contributions[gift.id].map((c) => (
                                 <div key={c.id} className="flex justify-between text-xs text-gray-600 py-1 border-b last:border-0">
@@ -325,18 +325,18 @@ export default function HostDashboard() {
               {activeTab === 'guests' && (
                 <div className="space-y-2">
                   {guests.length === 0 ? (
-                    <div className="text-center text-gray-400 py-8">Нет гостей. Добавьте первого!</div>
+                    <div className="text-center text-gray-400 py-8">No guests yet. Add your first!</div>
                   ) : (
                     guests.map((guest) => (
                       <div key={guest.id} className="flex items-center justify-between p-3 border rounded-lg">
                         <div>
                           <span className="font-medium text-sm">{guest.display_name}</span>
                           <span className="ml-2 text-xs text-gray-500">{guest.kinship_label}</span>
-                          <span className="ml-2 text-xs text-amber-600">Тир {guest.tier_rank}</span>
-                          {guest.parent_id && <span className="ml-2 text-xs text-blue-500">↳ подузел</span>}
+                          <span className="ml-2 text-xs text-amber-600">Tier {guest.tier_rank}</span>
+                          {guest.parent_id && <span className="ml-2 text-xs text-blue-500">↳ child node</span>}
                         </div>
                         <button onClick={() => deleteGuest(guest.id)} className="text-xs text-red-500 hover:underline">
-                          Удалить
+                          Remove
                         </button>
                       </div>
                     ))
@@ -349,7 +349,7 @@ export default function HostDashboard() {
                   {!familyTreeRoot ? (
                     <div className="text-center text-gray-400 py-8">
                       <div className="text-3xl mb-2">🌳</div>
-                      <p>Нажмите «Обновить дерево» для построения</p>
+                      <p>Click "Refresh Tree" to build</p>
                     </div>
                   ) : (
                     <div className="overflow-auto max-h-96 p-2">
@@ -364,87 +364,87 @@ export default function HostDashboard() {
       </div>
 
       {showCreateReg && (
-        <Modal title="Создать реестр" onClose={() => setShowCreateReg(false)}>
+        <Modal title="Create Registry" onClose={() => setShowCreateReg(false)}>
           <form onSubmit={createRegistry} className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Название *</label>
-              <input className="input-field" value={regForm.title} onChange={(e) => setRegForm({ ...regForm, title: e.target.value })} required minLength={3} placeholder="Свадьба Айгерим и Асета" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+              <input className="input-field" value={regForm.title} onChange={(e) => setRegForm({ ...regForm, title: e.target.value })} required minLength={3} placeholder="e.g. Aigerim & Aset Wedding" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Дата события *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Event Date *</label>
               <input type="date" className="input-field" value={regForm.event_date} onChange={(e) => setRegForm({ ...regForm, event_date: e.target.value })} required />
             </div>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={regForm.is_public} onChange={(e) => setRegForm({ ...regForm, is_public: e.target.checked })} className="rounded" />
-              Публичный реестр
+              Public registry
             </label>
             <div className="flex gap-2 pt-2">
-              <button type="submit" className="btn-primary flex-1">Создать</button>
-              <button type="button" onClick={() => setShowCreateReg(false)} className="btn-secondary flex-1">Отмена</button>
+              <button type="submit" className="btn-primary flex-1">Create</button>
+              <button type="button" onClick={() => setShowCreateReg(false)} className="btn-secondary flex-1">Cancel</button>
             </div>
           </form>
         </Modal>
       )}
 
       {showCreateGift && (
-        <Modal title="Добавить подарок" onClose={() => setShowCreateGift(false)}>
+        <Modal title="Add Gift" onClose={() => setShowCreateGift(false)}>
           <form onSubmit={createGift} className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Название *</label>
-              <input className="input-field" value={giftForm.title} onChange={(e) => setGiftForm({ ...giftForm, title: e.target.value })} required placeholder="Посудный набор" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+              <input className="input-field" value={giftForm.title} onChange={(e) => setGiftForm({ ...giftForm, title: e.target.value })} required placeholder="e.g. Dinner Set" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Целевая сумма (KZT) *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Target Amount (KZT) *</label>
               <input type="number" className="input-field" value={giftForm.target_amount_kzt} onChange={(e) => setGiftForm({ ...giftForm, target_amount_kzt: e.target.value })} required min={1000} placeholder="100000" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Требуемый тир (0=все)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Required Tier (0 = all)</label>
               <input type="number" className="input-field" value={giftForm.required_tier_rank} onChange={(e) => setGiftForm({ ...giftForm, required_tier_rank: Number(e.target.value) })} min={0} max={5} />
             </div>
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" checked={giftForm.is_fragile} onChange={(e) => setGiftForm({ ...giftForm, is_fragile: e.target.checked })} />
-              Хрупкий предмет
+              Fragile item
             </label>
             <div className="flex gap-2 pt-2">
-              <button type="submit" className="btn-primary flex-1">Добавить</button>
-              <button type="button" onClick={() => setShowCreateGift(false)} className="btn-secondary flex-1">Отмена</button>
+              <button type="submit" className="btn-primary flex-1">Add</button>
+              <button type="button" onClick={() => setShowCreateGift(false)} className="btn-secondary flex-1">Cancel</button>
             </div>
           </form>
         </Modal>
       )}
 
       {showCreateGuest && (
-        <Modal title="Добавить гостя" onClose={() => setShowCreateGuest(false)}>
+        <Modal title="Add Guest" onClose={() => setShowCreateGuest(false)}>
           <form onSubmit={createGuest} className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Имя *</label>
-              <input className="input-field" value={guestForm.display_name} onChange={(e) => setGuestForm({ ...guestForm, display_name: e.target.value })} required placeholder="Айгерим Сейткали" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+              <input className="input-field" value={guestForm.display_name} onChange={(e) => setGuestForm({ ...guestForm, display_name: e.target.value })} required placeholder="e.g. Aigerim Seitkali" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Родство *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Kinship *</label>
               <select className="input-field" value={guestForm.kinship_label} onChange={(e) => setGuestForm({ ...guestForm, kinship_label: e.target.value })}>
-                <option value="ata_ana">Ата/Ана (Родители)</option>
-                <option value="aga_apa">Аға/Апа (Брат/Сестра)</option>
-                <option value="jien">Жиен (Племянник/ца)</option>
-                <option value="kuda">Құда (Сват/Сватья)</option>
-                <option value="dos">Дос (Друг)</option>
-                <option value="other">Басқа (Другое)</option>
+                <option value="ata_ana">Parents (ata_ana)</option>
+                <option value="aga_apa">Sibling (aga_apa)</option>
+                <option value="jien">Niece/Nephew (jien)</option>
+                <option value="kuda">In-Laws (kuda)</option>
+                <option value="dos">Friend (dos)</option>
+                <option value="other">Other</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Тир (0=ближний, 5=дальний)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tier (0 = closest, 5 = most distant)</label>
               <input type="number" className="input-field" value={guestForm.tier_rank} onChange={(e) => setGuestForm({ ...guestForm, tier_rank: Number(e.target.value) })} min={0} max={5} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Родитель (ID гостя, необязательно)</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Parent Guest (optional)</label>
               <select className="input-field" value={guestForm.parent_id} onChange={(e) => setGuestForm({ ...guestForm, parent_id: e.target.value })}>
-                <option value="">— нет родителя —</option>
+                <option value="">— no parent —</option>
                 {guests.map((g) => <option key={g.id} value={g.id}>{g.display_name}</option>)}
               </select>
             </div>
             <div className="flex gap-2 pt-2">
-              <button type="submit" className="btn-primary flex-1">Добавить</button>
-              <button type="button" onClick={() => setShowCreateGuest(false)} className="btn-secondary flex-1">Отмена</button>
+              <button type="submit" className="btn-primary flex-1">Add</button>
+              <button type="button" onClick={() => setShowCreateGuest(false)} className="btn-secondary flex-1">Cancel</button>
             </div>
           </form>
         </Modal>

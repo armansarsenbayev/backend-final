@@ -24,21 +24,25 @@ function getResend() {
 
 async function sendEmail({ to, subject, html }) {
   const resend = getResend();
+
+  // Override recipient in development — Resend free plan restriction
+  const recipient = env.DEV_EMAIL_OVERRIDE || to;
+
   if (!resend || !env.RESEND_API_KEY) {
-    console.log(`[email] MOCK send to ${to}: ${subject}`);
+    console.log(`[email] MOCK send to ${recipient}: ${subject}`);
     return { id: 'mock-' + Date.now() };
   }
   try {
     const result = await resend.emails.send({
       from: env.EMAIL_FROM,
-      to,
+      to: recipient,
       subject,
       html,
     });
-    console.log(`[email] Sent to ${to}: ${subject} (id=${result.id})`);
+    console.log(`[email] Sent to ${recipient}: ${subject} (id=${result?.id})`);
     return result;
   } catch (err) {
-    console.error(`[email] Failed to send to ${to}:`, err.message);
+    console.error(`[email] Failed to send to ${recipient}:`, err.message);
     throw err;
   }
 }

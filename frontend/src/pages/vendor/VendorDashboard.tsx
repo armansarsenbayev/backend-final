@@ -6,7 +6,7 @@ interface Gift { id: string; title: string; state: string; target_amount_kzt: nu
 
 function stateBadge(state: string) {
   const map: Record<string, string> = { FUNDED: 'badge-funded', PURCHASED: 'badge-purchased', DELIVERED: 'badge-delivered' }
-  const labels: Record<string, string> = { FUNDED: 'Собрано', PURCHASED: 'Куплен', DELIVERED: 'Доставлен' }
+  const labels: Record<string, string> = { FUNDED: 'Funded', PURCHASED: 'Purchased', DELIVERED: 'Delivered' }
   return <span className={map[state] || 'badge-pending'}>{labels[state] || state}</span>
 }
 
@@ -31,19 +31,19 @@ export default function VendorDashboard() {
   useEffect(() => { fetchData() }, [])
 
   const confirmPurchase = async (giftId: string) => {
-    if (!confirm('Подтвердить покупку этого подарка?')) return
+    if (!confirm('Confirm purchase of this gift?')) return
     try {
       await api.patch(`/vendor/gifts/${giftId}/purchase`)
-      setMsg('✅ Покупка подтверждена!')
+      setMsg('✅ Purchase confirmed!')
       fetchData()
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } }
-      setMsg(e?.response?.data?.message || 'Ошибка подтверждения')
+      setMsg(e?.response?.data?.message || 'Confirmation failed')
     }
   }
 
   return (
-    <Layout title="Панель продавца">
+    <Layout title="Vendor Dashboard">
       {msg && (
         <div className={`mb-4 px-4 py-2 rounded-lg text-sm flex justify-between ${msg.startsWith('✅') ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
           <span>{msg}</span><button onClick={() => setMsg('')} className="font-bold ml-2">×</button>
@@ -55,18 +55,18 @@ export default function VendorDashboard() {
           onClick={() => setActiveTab('available')}
           className={`px-5 py-2.5 text-sm font-medium transition ${activeTab === 'available' ? 'border-b-2 border-amber-500 text-amber-700' : 'text-gray-500'}`}
         >
-          🛒 Доступные для покупки ({funded.length})
+          🛒 Available for Purchase ({funded.length})
         </button>
         <button
           onClick={() => setActiveTab('my')}
           className={`px-5 py-2.5 text-sm font-medium transition ${activeTab === 'my' ? 'border-b-2 border-amber-500 text-amber-700' : 'text-gray-500'}`}
         >
-          📦 Мои покупки ({myGifts.length})
+          📦 My Purchases ({myGifts.length})
         </button>
       </div>
 
       {loading ? (
-        <div className="text-center text-gray-400 py-16">Загрузка...</div>
+        <div className="text-center text-gray-400 py-16">Loading...</div>
       ) : (
         <>
           {activeTab === 'available' && (
@@ -74,7 +74,7 @@ export default function VendorDashboard() {
               {funded.length === 0 ? (
                 <div className="card text-center text-gray-400 py-16">
                   <div className="text-4xl mb-2">🎁</div>
-                  <p>Нет подарков, готовых к покупке</p>
+                  <p>No gifts ready for purchase</p>
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -82,18 +82,18 @@ export default function VendorDashboard() {
                     <div key={gift.id} className="card hover:shadow-md transition">
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="font-semibold text-gray-800">{gift.title}</h3>
-                        {gift.is_fragile && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">⚠️ Хрупкий</span>}
+                        {gift.is_fragile && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">⚠️ Fragile</span>}
                       </div>
                       <div className="text-sm text-gray-600 mb-1">
-                        Собрано: <strong>{gift.current_amount_kzt.toLocaleString()} KZT</strong>
+                        Funded: <strong>{gift.current_amount_kzt.toLocaleString()} KZT</strong>
                       </div>
                       <div className="text-sm text-gray-600 mb-3">
-                        Цель: {gift.target_amount_kzt.toLocaleString()} KZT
+                        Target: {gift.target_amount_kzt.toLocaleString()} KZT
                       </div>
                       <div className="flex items-center justify-between">
                         {stateBadge(gift.state)}
                         <button onClick={() => confirmPurchase(gift.id)} className="btn-primary text-sm">
-                          ✓ Подтвердить покупку
+                          ✓ Confirm Purchase
                         </button>
                       </div>
                     </div>
@@ -108,7 +108,7 @@ export default function VendorDashboard() {
               {myGifts.length === 0 ? (
                 <div className="card text-center text-gray-400 py-16">
                   <div className="text-4xl mb-2">📦</div>
-                  <p>Нет активных покупок</p>
+                  <p>No active purchases</p>
                 </div>
               ) : (
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -116,7 +116,7 @@ export default function VendorDashboard() {
                     <div key={gift.id} className="card">
                       <div className="flex items-start justify-between mb-2">
                         <h3 className="font-semibold text-gray-800">{gift.title}</h3>
-                        {gift.is_fragile && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">⚠️ Хрупкий</span>}
+                        {gift.is_fragile && <span className="text-xs bg-yellow-100 text-yellow-700 px-1.5 py-0.5 rounded">⚠️ Fragile</span>}
                       </div>
                       <div className="text-sm text-gray-600 mb-2">
                         {gift.current_amount_kzt.toLocaleString()} KZT
