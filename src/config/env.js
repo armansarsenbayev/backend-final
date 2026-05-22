@@ -52,6 +52,7 @@ const schema = z.object({
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),
 
   ADMIN_REGISTRATION_KEY: z.string().min(16).optional(),
+  DEV_EMAIL_OVERRIDE: z.string().email().optional(),
 })
 .superRefine((cfg, ctx) => {
   if (cfg.JWT_ACCESS_SECRET === cfg.JWT_REFRESH_SECRET) {

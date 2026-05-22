@@ -3,17 +3,17 @@ import { Link, useNavigate } from 'react-router-dom'
 import api from '../api/axios'
 
 const ROLES = [
-  { value: 'HOST', label: 'Хозяин реестра (HOST)' },
-  { value: 'GUEST', label: 'Гость (GUEST)' },
-  { value: 'VENDOR', label: 'Продавец (VENDOR)' },
-  { value: 'COURIER', label: 'Курьер (COURIER)' },
+  { value: 'HOST', label: 'Registry Host (HOST)' },
+  { value: 'GUEST', label: 'Guest (GUEST)' },
+  { value: 'VENDOR', label: 'Vendor (VENDOR)' },
+  { value: 'COURIER', label: 'Courier (COURIER)' },
 ]
 
 function getError(err: unknown): string {
   const e = err as { response?: { data?: { message?: string; error?: string; issues?: { issue: string }[] } } }
   const issues = e?.response?.data?.issues
   if (issues?.length) return issues.map((i) => i.issue).join(', ')
-  return e?.response?.data?.message || e?.response?.data?.error || 'Ошибка регистрации'
+  return e?.response?.data?.message || e?.response?.data?.error || 'Registration failed'
 }
 
 export default function Register() {
@@ -30,7 +30,7 @@ export default function Register() {
     setLoading(true)
     try {
       await api.post('/auth/register', form)
-      setSuccess('Регистрация успешна! Проверьте email для верификации.')
+      setSuccess('Registration successful! Check your email to verify your account.')
       setTimeout(() => navigate('/login'), 3000)
     } catch (err) {
       setError(getError(err))
@@ -47,7 +47,7 @@ export default function Register() {
       <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-6">
           <div className="text-5xl mb-2">🌸</div>
-          <h1 className="text-2xl font-bold text-gray-800">Регистрация</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Create Account</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -68,17 +68,17 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Имя пользователя</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
             <input type="text" value={form.username} onChange={set('username')} required minLength={3} className="input-field" placeholder="username" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
-            <input type="password" value={form.password} onChange={set('password')} required minLength={8} className="input-field" placeholder="минимум 8 символов" />
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input type="password" value={form.password} onChange={set('password')} required minLength={8} className="input-field" placeholder="min 8 characters" />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Роль</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
             <select value={form.role} onChange={set('role')} className="input-field">
               {ROLES.map((r) => (
                 <option key={r.value} value={r.value}>{r.label}</option>
@@ -87,14 +87,14 @@ export default function Register() {
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
-            {loading ? 'Регистрация...' : 'Зарегистрироваться'}
+            {loading ? 'Creating...' : 'Create Account'}
           </button>
         </form>
 
         <p className="mt-4 text-center text-sm text-gray-600">
-          Уже есть аккаунт?{' '}
+          Already have an account?{' '}
           <Link to="/login" className="text-amber-600 hover:underline font-medium">
-            Войти
+            Sign In
           </Link>
         </p>
       </div>

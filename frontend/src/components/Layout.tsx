@@ -8,11 +8,11 @@ interface LayoutProps {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  HOST: 'Хозяин',
-  GUEST: 'Гость',
-  VENDOR: 'Продавец',
-  COURIER: 'Курьер',
-  ADMIN: 'Администратор',
+  HOST: 'Host',
+  GUEST: 'Guest',
+  VENDOR: 'Vendor',
+  COURIER: 'Courier',
+  ADMIN: 'Administrator',
 }
 
 export default function Layout({ children, title }: LayoutProps) {
@@ -46,7 +46,7 @@ export default function Layout({ children, title }: LayoutProps) {
                   onClick={handleLogout}
                   className="bg-amber-700 hover:bg-amber-800 px-3 py-1.5 rounded text-sm transition"
                 >
-                  Выйти
+                  Sign Out
                 </button>
               </div>
             )}

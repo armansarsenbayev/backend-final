@@ -5,7 +5,7 @@ import api from '../../api/axios'
 interface User { id: string; email: string; username: string; role: string; is_active: boolean; is_email_verified: boolean; created_at: string }
 interface QueueStatus { waiting?: number; active?: number; completed?: number; failed?: number; delayed?: number; name?: string }
 
-const ROLE_LABELS: Record<string, string> = { HOST: 'Хозяин', GUEST: 'Гость', VENDOR: 'Продавец', COURIER: 'Курьер', ADMIN: 'Администратор' }
+const ROLE_LABELS: Record<string, string> = { HOST: 'Host', GUEST: 'Guest', VENDOR: 'Vendor', COURIER: 'Courier', ADMIN: 'Administrator' }
 const ROLES = ['', 'HOST', 'GUEST', 'VENDOR', 'COURIER', 'ADMIN']
 
 export default function AdminDashboard() {
@@ -43,10 +43,10 @@ export default function AdminDashboard() {
     try {
       const res = await api.patch(`/admin/users/${userId}/activate`, { isActive: !isActive })
       setUsers((prev) => prev.map((u) => (u.id === userId ? res.data : u)))
-      setMsg(`✅ Пользователь ${!isActive ? 'активирован' : 'деактивирован'}`)
+      setMsg(`✅ User ${!isActive ? 'activated' : 'deactivated'}`)
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } }
-      setMsg(e?.response?.data?.message || 'Ошибка')
+      setMsg(e?.response?.data?.message || 'Error')
     }
   }
 
@@ -60,12 +60,12 @@ export default function AdminDashboard() {
         { email: adminForm.email, username: adminForm.username, password: adminForm.password },
         { headers: { 'X-Admin-Key': adminForm.adminKey } }
       )
-      setMsg(`✅ Администратор создан: @${res.data.username}`)
+      setMsg(`✅ Administrator created: @${res.data.username}`)
       setAdminForm({ email: '', username: '', password: '', adminKey: '' })
       if (activeTab === 'users') fetchUsers(roleFilter)
     } catch (err) {
       const e = err as { response?: { data?: { message?: string; error?: string } } }
-      setMsg(e?.response?.data?.message || e?.response?.data?.error || 'Ошибка создания администратора')
+      setMsg(e?.response?.data?.message || e?.response?.data?.error || 'Failed to create administrator')
     } finally {
       setAdminLoading(false)
     }
@@ -81,7 +81,7 @@ export default function AdminDashboard() {
   }
 
   return (
-    <Layout title="Панель администратора">
+    <Layout title="Admin Dashboard">
       {msg && (
         <div className={`mb-4 px-4 py-2 rounded-lg text-sm flex justify-between ${msg.startsWith('✅') ? 'bg-green-50 border border-green-200 text-green-800' : 'bg-red-50 border border-red-200 text-red-800'}`}>
           <span>{msg}</span><button onClick={() => setMsg('')} className="font-bold ml-2">×</button>
@@ -95,7 +95,7 @@ export default function AdminDashboard() {
             onClick={() => { setActiveTab(tab); if (tab === 'queue') fetchQueueStatus() }}
             className={`px-5 py-2.5 text-sm font-medium transition ${activeTab === tab ? 'border-b-2 border-amber-500 text-amber-700' : 'text-gray-500 hover:text-gray-700'}`}
           >
-            {tab === 'users' ? '👥 Пользователи' : tab === 'queue' ? '📊 Очередь BullMQ' : '🔐 Создать ADMIN'}
+            {tab === 'users' ? '👥 Users' : tab === 'queue' ? '📊 BullMQ Queue' : '🔐 Create Admin'}
           </button>
         ))}
       </div>
@@ -109,30 +109,30 @@ export default function AdminDashboard() {
                 onClick={() => handleRoleFilter(role)}
                 className={`px-3 py-1.5 text-sm rounded-full border transition ${roleFilter === role ? 'bg-amber-600 text-white border-amber-600' : 'border-gray-300 text-gray-600 hover:border-amber-400'}`}
               >
-                {role || 'Все роли'}
+                {role || 'All Roles'}
               </button>
             ))}
-            <button onClick={() => fetchUsers(roleFilter)} className="btn-secondary text-sm ml-auto">↻ Обновить</button>
+            <button onClick={() => fetchUsers(roleFilter)} className="btn-secondary text-sm ml-auto">↻ Refresh</button>
           </div>
 
           {loading ? (
-            <div className="text-center text-gray-400 py-16">Загрузка...</div>
+            <div className="text-center text-gray-400 py-16">Loading...</div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b text-left text-gray-500 text-xs uppercase tracking-wide">
-                    <th className="pb-2 pr-4">Пользователь</th>
+                    <th className="pb-2 pr-4">User</th>
                     <th className="pb-2 pr-4">Email</th>
-                    <th className="pb-2 pr-4">Роль</th>
-                    <th className="pb-2 pr-4">Статус</th>
-                    <th className="pb-2 pr-4">Email верифицирован</th>
-                    <th className="pb-2">Действия</th>
+                    <th className="pb-2 pr-4">Role</th>
+                    <th className="pb-2 pr-4">Status</th>
+                    <th className="pb-2 pr-4">Email Verified</th>
+                    <th className="pb-2">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.length === 0 ? (
-                    <tr><td colSpan={6} className="text-center text-gray-400 py-8">Нет пользователей</td></tr>
+                    <tr><td colSpan={6} className="text-center text-gray-400 py-8">No users found</td></tr>
                   ) : (
                     users.map((user) => (
                       <tr key={user.id} className="border-b hover:bg-gray-50">
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
                         </td>
                         <td className="py-2.5 pr-4">
                           <span className={`px-2 py-0.5 rounded-full text-xs ${user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {user.is_active ? 'Активен' : 'Заблокирован'}
+                            {user.is_active ? 'Active' : 'Blocked'}
                           </span>
                         </td>
                         <td className="py-2.5 pr-4">
@@ -156,7 +156,7 @@ export default function AdminDashboard() {
                             onClick={() => toggleActive(user.id, user.is_active)}
                             className={`text-xs px-2 py-1 rounded transition ${user.is_active ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}
                           >
-                            {user.is_active ? 'Заблокировать' : 'Активировать'}
+                            {user.is_active ? 'Deactivate' : 'Activate'}
                           </button>
                         </td>
                       </tr>
@@ -171,17 +171,17 @@ export default function AdminDashboard() {
 
       {activeTab === 'queue' && (
         <div>
-          <button onClick={fetchQueueStatus} className="btn-secondary text-sm mb-4">↻ Обновить статус</button>
+          <button onClick={fetchQueueStatus} className="btn-secondary text-sm mb-4">↻ Refresh Status</button>
           {!queueStatus ? (
-            <div className="text-center text-gray-400 py-8">Нажмите «Обновить статус»</div>
+            <div className="text-center text-gray-400 py-8">Click "Refresh Status" to load</div>
           ) : (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
               {[
-                { label: 'Ожидание', key: 'waiting', color: 'bg-yellow-50 border-yellow-200 text-yellow-800' },
-                { label: 'Активные', key: 'active', color: 'bg-blue-50 border-blue-200 text-blue-800' },
-                { label: 'Выполнено', key: 'completed', color: 'bg-green-50 border-green-200 text-green-800' },
-                { label: 'Ошибки', key: 'failed', color: 'bg-red-50 border-red-200 text-red-800' },
-                { label: 'Отложено', key: 'delayed', color: 'bg-gray-50 border-gray-200 text-gray-800' },
+                { label: 'Waiting', key: 'waiting', color: 'bg-yellow-50 border-yellow-200 text-yellow-800' },
+                { label: 'Active', key: 'active', color: 'bg-blue-50 border-blue-200 text-blue-800' },
+                { label: 'Completed', key: 'completed', color: 'bg-green-50 border-green-200 text-green-800' },
+                { label: 'Failed', key: 'failed', color: 'bg-red-50 border-red-200 text-red-800' },
+                { label: 'Delayed', key: 'delayed', color: 'bg-gray-50 border-gray-200 text-gray-800' },
               ].map(({ label, key, color }) => (
                 <div key={key} className={`border rounded-xl p-4 text-center ${color}`}>
                   <div className="text-3xl font-bold">{(queueStatus as Record<string, unknown>)[key] ?? '—'}</div>
@@ -201,9 +201,9 @@ export default function AdminDashboard() {
       {activeTab === 'create-admin' && (
         <div className="max-w-md">
           <div className="card">
-            <h3 className="font-semibold text-gray-800 mb-1">Создать нового администратора</h3>
+            <h3 className="font-semibold text-gray-800 mb-1">Create a new administrator</h3>
             <p className="text-sm text-gray-500 mb-4">
-              Требуется секретный ключ <code className="bg-gray-100 px-1 rounded">ADMIN_REGISTRATION_KEY</code> из конфигурации сервера.
+              Requires the secret key <code className="bg-gray-100 px-1 rounded">ADMIN_REGISTRATION_KEY</code> from the server configuration.
             </p>
             <form onSubmit={createAdmin} className="space-y-3">
               <div>
@@ -218,7 +218,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Имя пользователя *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Username *</label>
                 <input
                   className="input-field"
                   value={adminForm.username}
@@ -229,7 +229,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Пароль * (мин. 8 символов)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Password * (min 8 chars)</label>
                 <input
                   type="password"
                   className="input-field"
@@ -241,7 +241,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Секретный ключ (X-Admin-Key) *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Secret Key (X-Admin-Key) *</label>
                 <input
                   type="password"
                   className="input-field"
@@ -252,7 +252,7 @@ export default function AdminDashboard() {
                 />
               </div>
               <button type="submit" disabled={adminLoading} className="btn-primary w-full">
-                {adminLoading ? 'Создание...' : '🔐 Создать администратора'}
+                {adminLoading ? 'Creating...' : '🔐 Create Administrator'}
               </button>
             </form>
           </div>

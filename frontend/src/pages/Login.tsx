@@ -8,7 +8,7 @@ const ROLE_ROUTES: Record<string, string> = {
 
 function getError(err: unknown): string {
   const e = err as { response?: { data?: { message?: string; error?: string } } }
-  return e?.response?.data?.message || e?.response?.data?.error || 'Ошибка входа'
+  return e?.response?.data?.message || e?.response?.data?.error || 'Login failed'
 }
 
 export default function Login() {
@@ -39,7 +39,7 @@ export default function Login() {
         <div className="text-center mb-6">
           <div className="text-5xl mb-2">🌸</div>
           <h1 className="text-2xl font-bold text-gray-800">Saukele</h1>
-          <p className="text-gray-500 text-sm mt-1">Казахский свадебный реестр подарков</p>
+          <p className="text-gray-500 text-sm mt-1">Kazakh Wedding Gift Registry</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -63,7 +63,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
             <input
               type="password"
               value={password}
@@ -76,20 +76,20 @@ export default function Login() {
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
-            {loading ? 'Вход...' : 'Войти'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
 
         <div className="mt-5 text-center text-sm text-gray-600 space-y-2">
           <div>
             <Link to="/forgot-password" className="text-amber-600 hover:underline">
-              Забыли пароль?
+              Forgot password?
             </Link>
           </div>
           <div>
-            Нет аккаунта?{' '}
+            Don't have an account?{' '}
             <Link to="/register" className="text-amber-600 hover:underline font-medium">
-              Зарегистрироваться
+              Sign Up
             </Link>
           </div>
         </div>
