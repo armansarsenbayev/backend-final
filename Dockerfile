@@ -23,6 +23,7 @@ COPY --from=deps /app/prisma ./prisma
 
 # Copy application source
 COPY src ./src
+COPY docs ./docs
 COPY package*.json ./
 
 EXPOSE 5000

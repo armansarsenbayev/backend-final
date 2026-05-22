@@ -10,10 +10,10 @@ const ROLES = [
 ]
 
 function getError(err: unknown): string {
-  const e = err as { response?: { data?: { message?: string; error?: string; issues?: { issue: string }[] } } }
-  const issues = e?.response?.data?.issues
-  if (issues?.length) return issues.map((i) => i.issue).join(', ')
-  return e?.response?.data?.message || e?.response?.data?.error || 'Registration failed'
+  const e = err as { response?: { data?: { error?: string; message?: string; details?: { field: string; issue: string }[] } } }
+  const details = e?.response?.data?.details
+  if (details?.length) return details.map((d) => `${d.field}: ${d.issue}`).join(' · ')
+  return e?.response?.data?.error || e?.response?.data?.message || 'Registration failed'
 }
 
 export default function Register() {

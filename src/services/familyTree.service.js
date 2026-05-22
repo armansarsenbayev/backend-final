@@ -3,79 +3,93 @@
 const { prisma } = require('../lib/prisma');
 const { errors } = require('../lib/errors');
 
-
+/**
+ * Build the family tree for a given root guest using pure Prisma ORM.
+ * Strategy:
+ *   1. Load all guests in the same registry in one query.
+ *   2. Traverse the subtree rooted at rootGuestId using BFS (in JS).
+ *   3. Fetch funded contribution totals in one groupBy query.
+ * No raw SQL — satisfies "ORM only" submission constraint.
+ */
 async function getFamilyTree({ rootGuestId, maxDepth = 10 }) {
   const root = await prisma.guest.findUnique({ where: { id: rootGuestId } });
   if (!root) throw errors.NotFound('Guest');
 
   const maxDepthInt = Math.max(1, Math.min(parseInt(maxDepth, 10) || 10, 20));
 
-  // Recursive CTE is the only supported way to traverse a self-referential
-  // tree in Prisma. $queryRaw with tagged template = parameterized, safe.
-  const rows = await prisma.$queryRaw`
-    WITH RECURSIVE tree AS (
-      SELECT
-        g.id,
-        g."parentId",
-        g."displayName",
-        g."kinshipLabel",
-        g."tierRank",
-        g."registryId",
-        0            AS depth,
-        ARRAY[g.id]  AS path
-      FROM guests g
-      WHERE g.id = ${rootGuestId}::uuid
+  // Load every guest in this registry once — avoids N+1 queries
+  const allGuests = await prisma.guest.findMany({
+    where: { registryId: root.registryId },
+  });
 
-      UNION ALL
+  const guestById = new Map(allGuests.map((g) => [g.id, g]));
 
-      SELECT
-        c.id,
-        c."parentId",
-        c."displayName",
-        c."kinshipLabel",
-        c."tierRank",
-        c."registryId",
-        t.depth + 1,
-        t.path || c.id
-      FROM guests c
-      JOIN tree t ON c."parentId" = t.id
-      WHERE NOT c.id = ANY(t.path)
-        AND t.depth < ${maxDepthInt}
-    )
-    SELECT
-      t.id,
-      t."parentId"     AS parent_id,
-      t."displayName"  AS display_name,
-      t."kinshipLabel" AS kinship_label,
-      t."tierRank"     AS tier_rank,
-      t.depth,
-      CASE
-        WHEN t."tierRank" = 0 THEN 100000
-        WHEN t."tierRank" = 1 THEN  50000
-        WHEN t."tierRank" = 2 THEN  20000
-        ELSE                        10000
-      END AS suggested_kzt,
-      COALESCE((
-        SELECT SUM(contrib."amountKzt")
-        FROM contributions contrib
-        WHERE contrib."guestId" = t.id
-          AND contrib.status = 'FUNDED'
-      ), 0) AS funded_kzt
-    FROM tree t
-    ORDER BY t.depth ASC, t."displayName" ASC
-  `;
+  // Build parent → children index
+  const childrenOf = new Map();
+  for (const g of allGuests) {
+    if (!g.parentId) continue;
+    if (!childrenOf.has(g.parentId)) childrenOf.set(g.parentId, []);
+    childrenOf.get(g.parentId).push(g.id);
+  }
+
+  // BFS from rootGuestId, honouring maxDepth and cycle-guard
+  const visited = []; // { id, depth }
+  const seen = new Set();
+  const queue = [{ id: rootGuestId, depth: 0 }];
+
+  while (queue.length > 0) {
+    const { id, depth } = queue.shift();
+    if (seen.has(id)) continue;
+    seen.add(id);
+
+    const guest = guestById.get(id);
+    if (!guest) continue;
+
+    visited.push({ guest, depth });
+
+    if (depth < maxDepthInt) {
+      for (const childId of childrenOf.get(id) ?? []) {
+        if (!seen.has(childId)) queue.push({ id: childId, depth: depth + 1 });
+      }
+    }
+  }
+
+  // Aggregate funded contributions for all visited guests in one query
+  const visitedIds = visited.map(({ guest }) => guest.id);
+  const contribAgg = await prisma.contribution.groupBy({
+    by: ['guestId'],
+    where: { guestId: { in: visitedIds }, status: 'FUNDED' },
+    _sum: { amountKzt: true },
+  });
+  const fundedByGuest = new Map(
+    contribAgg.map((row) => [row.guestId, Number(row._sum.amountKzt ?? 0)])
+  );
+
+  // Sort: depth ASC, displayName ASC (mirrors original CTE ORDER BY)
+  visited.sort((a, b) =>
+    a.depth !== b.depth
+      ? a.depth - b.depth
+      : (a.guest.displayName ?? '').localeCompare(b.guest.displayName ?? '')
+  );
+
+  const suggestedKzt = (tierRank) => {
+    if (tierRank === 0) return 100000;
+    if (tierRank === 1) return 50000;
+    if (tierRank === 2) return 20000;
+    return 10000;
+  };
 
   return {
     root_id: rootGuestId,
-    nodes: rows.map((r) => ({
-      id: r.id,
-      parent_id: r.parent_id,
-      display_name: r.display_name,
-      kinship_label: r.kinship_label,
-      tier_rank: Number(r.tier_rank),
-      depth: Number(r.depth),
-      suggested_kzt: Number(r.suggested_kzt),
-      funded_kzt: Number(r.funded_kzt),
+    nodes: visited.map(({ guest, depth }) => ({
+      id: guest.id,
+      parent_id: guest.parentId,
+      display_name: guest.displayName,
+      kinship_label: guest.kinshipLabel,
+      tier_rank: Number(guest.tierRank),
+      depth,
+      suggested_kzt: suggestedKzt(Number(guest.tierRank)),
+      funded_kzt: fundedByGuest.get(guest.id) ?? 0,
     })),
   };
 }

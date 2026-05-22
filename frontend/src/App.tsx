@@ -13,6 +13,7 @@ import GuestDashboard from './pages/guest/GuestDashboard'
 import VendorDashboard from './pages/vendor/VendorDashboard'
 import CourierDashboard from './pages/courier/CourierDashboard'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import AdminRegister from './pages/AdminRegister'
 
 const ROLE_ROUTES: Record<string, string> = {
   HOST: '/host',
@@ -35,6 +36,7 @@ export default function App() {
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/admin-register" element={<AdminRegister />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
