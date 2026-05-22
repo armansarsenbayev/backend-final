@@ -33,14 +33,18 @@ async function sendEmail({ to, subject, html }) {
     return { id: 'mock-' + Date.now() };
   }
   try {
-    const result = await resend.emails.send({
+    const { data, error } = await resend.emails.send({
       from: env.EMAIL_FROM,
       to: recipient,
       subject,
       html,
     });
-    console.log(`[email] Sent to ${recipient}: ${subject} (id=${result?.id})`);
-    return result;
+    if (error) {
+      console.error(`[email] Resend error to ${recipient}:`, error.message, JSON.stringify(error));
+      throw new Error(error.message);
+    }
+    console.log(`[email] Sent to ${recipient}: ${subject} (id=${data?.id})`);
+    return data;
   } catch (err) {
     console.error(`[email] Failed to send to ${recipient}:`, err.message);
     throw err;
