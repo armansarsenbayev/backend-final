@@ -240,9 +240,18 @@ router.get('/admin/audit-logs', requireAuth, requireRole('ADMIN'),
     const rows = await prisma.auditLog.findMany({
       include: { user: { select: { username: true, email: true } } },
       orderBy: { createdAt: 'desc' },
-      take: 200,
+      take: 500,
     });
-    res.status(200).json({ data: rows });
+    const data = rows.map((log) => ({
+      id: log.id,
+      action: log.action,
+      entity_type: log.entityType,
+      entity_id: log.entityId,
+      metadata: log.metadata,
+      created_at: log.createdAt,
+      user: log.user ? { username: log.user.username, email: log.user.email } : null,
+    }));
+    res.status(200).json({ data });
   })
 );
 

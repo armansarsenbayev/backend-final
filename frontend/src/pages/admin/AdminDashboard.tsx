@@ -43,6 +43,97 @@ function Empty({ cols, text }: { cols: number; text: string }) {
   return <tr><td colSpan={cols} className="text-center text-stone-400 py-12 text-sm">{text}</td></tr>
 }
 
+const ACTION_COLORS: Record<string, string> = {
+  USER_REGISTERED:     'bg-emerald-50 text-emerald-700 border-emerald-200',
+  USER_LOGIN:          'bg-blue-50 text-blue-700 border-blue-200',
+  USER_LOGOUT:         'bg-slate-50 text-slate-600 border-slate-200',
+  REGISTRY_CREATED:    'bg-violet-50 text-violet-700 border-violet-200',
+  GIFT_CREATED:        'bg-amber-50 text-amber-700 border-amber-200',
+  GIFT_STATE_CHANGED:  'bg-orange-50 text-orange-700 border-orange-200',
+  CONTRIBUTION_FUNDED: 'bg-teal-50 text-teal-700 border-teal-200',
+}
+
+function AuditLogRow({ log, fmt }: { log: AuditLog; fmt: (d: string | null | undefined) => string }) {
+  const [expanded, setExpanded] = useState(false)
+  const actionColor = ACTION_COLORS[log.action] || 'bg-stone-100 text-stone-600 border-stone-200'
+  const meta = log.metadata && Object.keys(log.metadata).length > 0 ? log.metadata : null
+
+  return (
+    <div className={`border rounded-2xl transition-all duration-150 ${expanded ? 'border-stone-200 shadow-card' : 'border-stone-100 hover:border-stone-200'}`}>
+      <div
+        className="flex items-start gap-3 px-4 py-3 cursor-pointer select-none"
+        onClick={() => meta && setExpanded((p) => !p)}
+      >
+        {/* Timestamp */}
+        <div className="text-xs text-stone-400 whitespace-nowrap pt-0.5 w-32 flex-shrink-0">
+          {fmt(log.created_at)}
+        </div>
+
+        {/* Action badge */}
+        <div className="flex-shrink-0">
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-lg text-xs font-semibold border font-mono ${actionColor}`}>
+            {log.action}
+          </span>
+        </div>
+
+        {/* User */}
+        <div className="flex-shrink-0 w-28">
+          {log.user ? (
+            <span className="text-xs text-stone-600 font-medium">@{log.user.username}</span>
+          ) : (
+            <span className="text-xs text-stone-300">system</span>
+          )}
+        </div>
+
+        {/* Entity */}
+        <div className="flex-shrink-0 flex items-center gap-1.5">
+          <span className="text-xs bg-stone-100 text-stone-500 border border-stone-200 px-1.5 py-0.5 rounded-lg font-mono">{log.entity_type}</span>
+          <span className="text-xs text-stone-300 font-mono">{log.entity_id.slice(0, 8)}…</span>
+        </div>
+
+        {/* Metadata preview */}
+        {meta && (
+          <div className="flex-1 min-w-0 flex items-center gap-1.5 flex-wrap">
+            {Object.entries(meta).slice(0, 3).map(([k, v]) => (
+              <span key={k} className="inline-flex items-center gap-1 text-xs bg-stone-50 border border-stone-200 px-1.5 py-0.5 rounded-lg">
+                <span className="text-stone-400">{k}:</span>
+                <span className="text-stone-700 font-medium truncate max-w-[80px]">{String(v)}</span>
+              </span>
+            ))}
+            {Object.keys(meta).length > 3 && (
+              <span className="text-xs text-stone-400">+{Object.keys(meta).length - 3} more</span>
+            )}
+            <span className="ml-auto text-stone-300 text-xs">{expanded ? '▲' : '▼'}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Expanded metadata — Prisma Studio style */}
+      {expanded && meta && (
+        <div className="border-t border-stone-100 bg-stone-50 rounded-b-2xl px-4 py-3">
+          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mb-2">Metadata</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {Object.entries(meta).map(([k, v]) => (
+              <div key={k} className="flex items-start gap-2 bg-white border border-stone-100 rounded-xl px-3 py-2">
+                <span className="text-xs font-semibold text-stone-400 font-mono min-w-max">{k}</span>
+                <span className="text-xs text-stone-700 break-all font-mono">
+                  {typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)}
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-2 pt-2 border-t border-stone-100">
+            <div className="flex items-center gap-2 text-xs text-stone-400">
+              <span className="font-mono">entity_id:</span>
+              <span className="font-mono text-stone-600 select-all">{log.entity_id}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<Tab>('users')
   const [msg, setMsg] = useState('')
@@ -320,29 +411,19 @@ export default function AdminDashboard() {
       {/* ── AUDIT LOG ── */}
       {activeTab === 'audit' && (
         <div>
-          <div className="flex justify-end mb-4">
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-stone-500">{auditLogs.length} entries</p>
             <button onClick={fetchAuditLogs} className="btn-secondary text-xs py-1.5 px-3">↻ Refresh</button>
           </div>
           {auditLoading ? (
             <div className="flex items-center justify-center py-16 text-stone-400 gap-2 text-sm">Loading...</div>
+          ) : auditLogs.length === 0 ? (
+            <div className="card text-center py-16 text-stone-400">No audit logs yet</div>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-stone-100">
-              <table className="w-full">
-                <thead className="bg-stone-50 border-b border-stone-100">
-                  <tr><Th>Action</Th><Th>User</Th><Th>Entity</Th><Th>Details</Th><Th>Time</Th></tr>
-                </thead>
-                <tbody className="divide-y divide-stone-50">
-                  {!auditLogs || auditLogs.length === 0 ? <Empty cols={5} text="No audit logs yet" /> : auditLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-stone-50/50 transition-colors">
-                      <Td><span className="font-mono text-xs bg-stone-100 border border-stone-200 px-1.5 py-0.5 rounded-lg">{log.action}</span></Td>
-                      <Td className="text-stone-500">{log.user ? `@${log.user.username}` : '—'}</Td>
-                      <Td className="text-stone-400 text-xs">{log.entity_type}</Td>
-                      <Td className="text-stone-400 text-xs max-w-xs truncate">{log.metadata ? JSON.stringify(log.metadata) : '—'}</Td>
-                      <Td className="text-stone-400 text-xs">{fmt(log.created_at)}</Td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="space-y-2">
+              {auditLogs.map((log) => (
+                <AuditLogRow key={log.id} log={log} fmt={fmt} />
+              ))}
             </div>
           )}
         </div>
