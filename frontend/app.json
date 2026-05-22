@@ -1,0 +1,12 @@
+{
+  "healthchecks": {
+    "web": [
+      {
+        "type": "startup",
+        "name": "frontend health",
+        "path": "/",
+        "attempts": 3
+      }
+    ]
+  }
+}

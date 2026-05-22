@@ -30,6 +30,9 @@ function buildApp() {
 
   app.use(helmet());
 
+  app.use(
+    cors({
+      origin: (origin, cb) => {
         if (!origin) return cb(null, true);
         if (env.CORS_ORIGINS_LIST.includes(origin) || env.CORS_ORIGINS_LIST.includes('*')) {
           return cb(null, true);
