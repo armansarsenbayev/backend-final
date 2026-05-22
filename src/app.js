@@ -50,11 +50,32 @@ function buildApp() {
     res.status(200).json({ status: 'ok', uptime_s: Math.round(process.uptime()) });
   });
 
+  // Временный лог для отладки
+console.log('--- Swagger Debug ---');
+console.log('__dirname:', __dirname);
+console.log('Target path:', path.resolve(__dirname, '..', 'docs', 'openapi.yaml'));
+console.log('Exists:', fs.existsSync(path.resolve(__dirname, '..', 'docs', 'openapi.yaml')));
+console.log('---------------------');
+
   const openapiPath = path.resolve(__dirname, '..', 'docs', 'openapi.yaml');
+
   if (fs.existsSync(openapiPath)) {
-    const spec = yaml.load(fs.readFileSync(openapiPath, 'utf8'));
-    app.use('/docs', swaggerUi.serve, swaggerUi.setup(spec, { explorer: true }));
-    app.get('/openapi.yaml', (_req, res) => res.type('text/yaml').send(fs.readFileSync(openapiPath, 'utf8')));
+    try {
+      const spec = yaml.load(fs.readFileSync(openapiPath, 'utf8'));
+      // Настраиваем префикс /docs
+      app.use('/docs', swaggerUi.serve);
+      app.get('/docs', swaggerUi.setup(spec, { explorer: true }));
+      
+      // На всякий случай пропишем и /api/docs, если ты к нему привык
+      app.use('/api/docs', swaggerUi.serve);
+      app.get('/api/docs', swaggerUi.setup(spec, { explorer: true }));
+
+      console.log('✅ Swagger UI ready on /docs and /api/docs');
+    } catch (e) {
+      console.error('❌ Failed to load YAML:', e.message);
+    }
+  } else {
+    console.error('⚠️ openapi.yaml not found at:', openapiPath);
   }
 
   app.use('/api/v1/auth', authRoutes);

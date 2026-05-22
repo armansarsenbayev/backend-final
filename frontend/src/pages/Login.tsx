@@ -7,8 +7,10 @@ const ROLE_ROUTES: Record<string, string> = {
 }
 
 function getError(err: unknown): string {
-  const e = err as { response?: { data?: { message?: string; error?: string } } }
-  return e?.response?.data?.message || e?.response?.data?.error || 'Login failed'
+  const e = err as { response?: { data?: { error?: string; message?: string; details?: { field: string; issue: string }[] } } }
+  const details = e?.response?.data?.details
+  if (details?.length) return details.map((d) => d.issue).join(', ')
+  return e?.response?.data?.error || e?.response?.data?.message || 'Login failed'
 }
 
 export default function Login() {
@@ -90,6 +92,11 @@ export default function Login() {
             Don't have an account?{' '}
             <Link to="/register" className="text-amber-600 hover:underline font-medium">
               Sign Up
+            </Link>
+          </div>
+          <div className="pt-1 border-t border-gray-100">
+            <Link to="/admin-register" className="text-xs text-gray-400 hover:text-gray-600">
+              Admin registration →
             </Link>
           </div>
         </div>

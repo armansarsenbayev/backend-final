@@ -56,6 +56,7 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-Saukele <onboarding@resend.dev>}
       APP_URL: ${APP_URL:-http://localhost:3000}
       ADMIN_REGISTRATION_KEY: ${ADMIN_REGISTRATION_KEY:-saukele-admin-secret-key-2026}
+      DEV_EMAIL_OVERRIDE: ${DEV_EMAIL_OVERRIDE:-}
     ports:
       - "3000:3000"
 

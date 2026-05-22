@@ -1,4 +1,4 @@
-import { useState, useEffect, FormEvent } from 'react'
+import { useState, useEffect, FormEvent, ChangeEvent } from 'react'
 import Layout from '../../components/Layout'
 import api from '../../api/axios'
 
@@ -7,6 +7,19 @@ interface Gift { id: string; title: string; state: string; target_amount_kzt: nu
 interface Guest { id: string; display_name: string; kinship_label: string; tier_rank: number; parent_id: string | null; user_id: string | null }
 interface Contribution { id: string; amount_kzt: number; amount_original: number; currency_original: string; status: string; created_at: string }
 interface TreeNode { id: string; display_name: string; kinship_label: string; tier_rank: number; children?: TreeNode[] }
+interface FlatNode { id: string; parent_id: string | null; display_name: string; kinship_label: string; tier_rank: number }
+
+function buildForest(nodes: FlatNode[]): TreeNode[] {
+  const map = new Map<string, TreeNode>()
+  for (const n of nodes) map.set(n.id, { id: n.id, display_name: n.display_name, kinship_label: n.kinship_label, tier_rank: n.tier_rank, children: [] })
+  const roots: TreeNode[] = []
+  for (const n of nodes) {
+    const node = map.get(n.id)!
+    if (n.parent_id && map.has(n.parent_id)) map.get(n.parent_id)!.children!.push(node)
+    else if (!n.parent_id) roots.push(node)
+  }
+  return roots
+}
 
 function stateBadge(state: string) {
   const map: Record<string, string> = {
@@ -56,7 +69,7 @@ export default function HostDashboard() {
   const [gifts, setGifts] = useState<Gift[]>([])
   const [guests, setGuests] = useState<Guest[]>([])
   const [activeTab, setActiveTab] = useState<'gifts' | 'guests' | 'tree'>('gifts')
-  const [familyTreeRoot, setFamilyTreeRoot] = useState<TreeNode | null>(null)
+  const [familyTreeRoots, setFamilyTreeRoots] = useState<TreeNode[]>([])
   const [contributions, setContributions] = useState<Record<string, Contribution[]>>({})
   const [expandedGift, setExpandedGift] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -65,10 +78,15 @@ export default function HostDashboard() {
   const [showCreateReg, setShowCreateReg] = useState(false)
   const [showCreateGift, setShowCreateGift] = useState(false)
   const [showCreateGuest, setShowCreateGuest] = useState(false)
+  const [showEditReg, setShowEditReg] = useState(false)
+  const [editRegForm, setEditRegForm] = useState({ title: '', event_date: '', is_public: true })
 
   const [regForm, setRegForm] = useState({ title: '', event_date: '', is_public: true })
   const [giftForm, setGiftForm] = useState({ title: '', target_amount_kzt: '', required_tier_rank: 0, is_fragile: false })
-  const [guestForm, setGuestForm] = useState({ display_name: '', kinship_label: 'other', tier_rank: 0, parent_id: '' })
+  const [guestForm, setGuestForm] = useState({ display_name: '', kinship_label: 'other', tier_rank: 0, parent_id: '', user_id: '' })
+  const [userLookup, setUserLookup] = useState<{ username: string; role: string } | null>(null)
+  const [userLookupInput, setUserLookupInput] = useState('')
+  const [userLookupError, setUserLookupError] = useState('')
 
   useEffect(() => {
     api.get('/registries').then((r) => { setRegistries(r.data.data || []); setLoading(false) }).catch(() => setLoading(false))
@@ -77,7 +95,7 @@ export default function HostDashboard() {
   const selectRegistry = async (reg: Registry) => {
     setSelectedReg(reg)
     setActiveTab('gifts')
-    setFamilyTreeRoot(null)
+    setFamilyTreeRoots([])
     const [gRes, gsRes] = await Promise.all([
       api.get(`/registries/${reg.id}/gifts`),
       api.get(`/registries/${reg.id}/guests`),
@@ -93,11 +111,52 @@ export default function HostDashboard() {
     setExpandedGift(giftId)
   }
 
-  const loadFamilyTree = async () => {
+  const loadFamilyTree = () => {
     if (!guests.length) { setMsg('No guests to build the tree'); return }
-    const root = guests.find((g) => !g.parent_id) || guests[0]
-    const res = await api.get(`/guests/${root.id}/family-tree`)
-    setFamilyTreeRoot(res.data)
+    setFamilyTreeRoots(buildForest(guests))
+  }
+
+  const openEditReg = (reg: Registry) => {
+    setEditRegForm({
+      title: reg.title,
+      event_date: new Date(reg.event_date).toISOString().split('T')[0],
+      is_public: reg.is_public,
+    })
+    setShowEditReg(true)
+  }
+
+  const saveEditReg = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!selectedReg) return
+    try {
+      const res = await api.patch(`/registries/${selectedReg.id}`, {
+        title: editRegForm.title,
+        event_date: new Date(editRegForm.event_date).toISOString(),
+        is_public: editRegForm.is_public,
+      })
+      const updated = res.data
+      setRegistries((prev) => prev.map((r: Registry) => (r.id === updated.id ? updated : r)))
+      setSelectedReg(updated)
+      setShowEditReg(false)
+    } catch (err) {
+      const e = err as { response?: { data?: { error?: string; details?: { issue: string }[] } } }
+      const details = e?.response?.data?.details
+      setMsg(details?.length ? details.map((d) => d.issue).join(', ') : e?.response?.data?.error || 'Failed to update registry')
+    }
+  }
+
+  const deleteRegistry = async () => {
+    if (!selectedReg || !confirm(`Delete registry "${selectedReg.title}"? This cannot be undone.`)) return
+    try {
+      await api.delete(`/registries/${selectedReg.id}`)
+      setRegistries((prev) => prev.filter((r: Registry) => r.id !== selectedReg.id))
+      setSelectedReg(null)
+      setGifts([])
+      setGuests([])
+    } catch (err) {
+      const e = err as { response?: { data?: { error?: string } } }
+      setMsg(e?.response?.data?.error || 'Failed to delete registry')
+    }
   }
 
   const createRegistry = async (e: FormEvent) => {
@@ -140,14 +199,17 @@ export default function HostDashboard() {
     }
   }
 
-  const deleteGift = async (giftId: string) => {
-    if (!confirm('Delete this gift?') || !selectedReg) return
+  const lookupUser = async () => {
+    setUserLookupError('')
+    setUserLookup(null)
+    if (!userLookupInput.trim()) return
     try {
-      await api.delete(`/registries/${selectedReg.id}/gifts/${giftId}`)
-      setGifts((prev) => prev.filter((g) => g.id !== giftId))
-    } catch (err) {
-      const e = err as { response?: { data?: { message?: string } } }
-      setMsg(e?.response?.data?.message || 'Deletion failed')
+      const res = await api.get(`/users/lookup?username=${encodeURIComponent(userLookupInput.trim())}`)
+      setUserLookup({ username: res.data.username, role: res.data.role })
+      setGuestForm((prev) => ({ ...prev, user_id: res.data.id }))
+    } catch {
+      setUserLookupError('User not found')
+      setGuestForm((prev) => ({ ...prev, user_id: '' }))
     }
   }
 
@@ -155,11 +217,19 @@ export default function HostDashboard() {
     e.preventDefault()
     if (!selectedReg) return
     try {
-      const body = { ...guestForm, parent_id: guestForm.parent_id || null }
+      const body = {
+        display_name: guestForm.display_name,
+        kinship_label: guestForm.kinship_label,
+        tier_rank: guestForm.tier_rank,
+        parent_id: guestForm.parent_id || null,
+        user_id: guestForm.user_id || null,
+      }
       const res = await api.post(`/registries/${selectedReg.id}/guests`, body)
       setGuests((prev) => [...prev, res.data])
       setShowCreateGuest(false)
-      setGuestForm({ display_name: '', kinship_label: 'other', tier_rank: 0, parent_id: '' })
+      setGuestForm({ display_name: '', kinship_label: 'other', tier_rank: 0, parent_id: '', user_id: '' })
+      setUserLookup(null)
+      setUserLookupInput('')
     } catch (err) {
       const e = err as { response?: { data?: { message?: string } } }
       setMsg(e?.response?.data?.message || 'Failed to add guest')
@@ -229,7 +299,16 @@ export default function HostDashboard() {
           ) : (
             <div className="card">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-gray-800">{selectedReg.title}</h3>
+                <div>
+                  <h3 className="font-semibold text-gray-800">{selectedReg.title}</h3>
+                  <div className="text-xs text-gray-400 mt-0.5">
+                    {new Date(selectedReg.event_date).toLocaleDateString('en-US')}
+                    {' · '}
+                    <span className={selectedReg.is_public ? 'text-green-600' : 'text-gray-500'}>
+                      {selectedReg.is_public ? 'Public' : 'Private'}
+                    </span>
+                  </div>
+                </div>
                 <div className="flex gap-2">
                   {activeTab === 'gifts' && (
                     <button onClick={() => setShowCreateGift(true)} className="btn-primary text-sm">+ Gift</button>
@@ -240,6 +319,8 @@ export default function HostDashboard() {
                   {activeTab === 'tree' && (
                     <button onClick={loadFamilyTree} className="btn-secondary text-sm">Refresh Tree</button>
                   )}
+                  <button onClick={() => openEditReg(selectedReg)} className="btn-secondary text-sm">✏️ Edit</button>
+                  <button onClick={deleteRegistry} className="text-sm px-3 py-1.5 rounded border border-red-200 text-red-600 hover:bg-red-50 transition">🗑 Delete</button>
                 </div>
               </div>
 
@@ -281,11 +362,6 @@ export default function HostDashboard() {
                             {['PENDING', 'FUNDED'].includes(gift.state) && (
                               <button onClick={() => cancelGift(gift.id)} className="text-xs text-orange-600 hover:underline">
                                 Cancel
-                              </button>
-                            )}
-                            {gift.state === 'PENDING' && (
-                              <button onClick={() => deleteGift(gift.id)} className="text-xs text-red-600 hover:underline">
-                                Delete
                               </button>
                             )}
                           </div>
@@ -346,14 +422,18 @@ export default function HostDashboard() {
 
               {activeTab === 'tree' && (
                 <div>
-                  {!familyTreeRoot ? (
+                  {familyTreeRoots.length === 0 ? (
                     <div className="text-center text-gray-400 py-8">
                       <div className="text-3xl mb-2">🌳</div>
                       <p>Click "Refresh Tree" to build</p>
                     </div>
                   ) : (
-                    <div className="overflow-auto max-h-96 p-2">
-                      <FamilyTreeNode node={familyTreeRoot} />
+                    <div className="overflow-auto max-h-96 p-2 space-y-4">
+                      {familyTreeRoots.map((root: TreeNode) => (
+                        <div key={root.id}>
+                          <FamilyTreeNode node={root} />
+                        </div>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -413,8 +493,31 @@ export default function HostDashboard() {
         </Modal>
       )}
 
+      {showEditReg && selectedReg && (
+        <Modal title="Edit Registry" onClose={() => setShowEditReg(false)}>
+          <form onSubmit={saveEditReg} className="space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+              <input className="input-field" value={editRegForm.title} onChange={(e: ChangeEvent<HTMLInputElement>) => setEditRegForm({ ...editRegForm, title: e.target.value })} required minLength={3} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Event Date *</label>
+              <input type="date" className="input-field" value={editRegForm.event_date} onChange={(e: ChangeEvent<HTMLInputElement>) => setEditRegForm({ ...editRegForm, event_date: e.target.value })} required />
+            </div>
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={editRegForm.is_public} onChange={(e: ChangeEvent<HTMLInputElement>) => setEditRegForm({ ...editRegForm, is_public: e.target.checked })} className="rounded" />
+              Public registry
+            </label>
+            <div className="flex gap-2 pt-2">
+              <button type="submit" className="btn-primary flex-1">Save</button>
+              <button type="button" onClick={() => setShowEditReg(false)} className="btn-secondary flex-1">Cancel</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
       {showCreateGuest && (
-        <Modal title="Add Guest" onClose={() => setShowCreateGuest(false)}>
+        <Modal title="Add Guest" onClose={() => { setShowCreateGuest(false); setUserLookup(null); setUserLookupInput(''); setUserLookupError('') }}>
           <form onSubmit={createGuest} className="space-y-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
@@ -442,9 +545,35 @@ export default function HostDashboard() {
                 {guests.map((g) => <option key={g.id} value={g.id}>{g.display_name}</option>)}
               </select>
             </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Link User Account <span className="text-gray-400 font-normal">(optional — lets them contribute)</span>
+              </label>
+              <div className="flex gap-2">
+                <input
+                  className="input-field flex-1"
+                  value={userLookupInput}
+                  onChange={(e) => { setUserLookupInput(e.target.value); setUserLookup(null); setUserLookupError(''); setGuestForm((p) => ({ ...p, user_id: '' })) }}
+                  placeholder="username"
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); lookupUser() } }}
+                />
+                <button type="button" onClick={lookupUser} className="btn-secondary text-sm px-3">Find</button>
+              </div>
+              {userLookup && (
+                <div className="mt-1.5 flex items-center gap-2 text-sm text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
+                  <span>✓</span>
+                  <span><strong>@{userLookup.username}</strong> ({userLookup.role}) — will be linked</span>
+                </div>
+              )}
+              {userLookupError && (
+                <p className="mt-1 text-xs text-red-600">{userLookupError}</p>
+              )}
+            </div>
+
             <div className="flex gap-2 pt-2">
               <button type="submit" className="btn-primary flex-1">Add</button>
-              <button type="button" onClick={() => setShowCreateGuest(false)} className="btn-secondary flex-1">Cancel</button>
+              <button type="button" onClick={() => { setShowCreateGuest(false); setUserLookup(null); setUserLookupInput(''); setUserLookupError('') }} className="btn-secondary flex-1">Cancel</button>
             </div>
           </form>
         </Modal>

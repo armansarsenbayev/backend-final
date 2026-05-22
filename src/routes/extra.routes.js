@@ -22,6 +22,18 @@ const router = express.Router();
 const guestIdParam = z.object({ guest_id: z.string().uuid() });
 const giftIdParam  = z.object({ gift_id: z.string().uuid() });
 
+router.get('/users/lookup', requireAuth,
+  validate({ query: z.object({ username: z.string().min(1) }) }),
+  asyncHandler(async (req, res) => {
+    const user = await prisma.user.findUnique({
+      where: { username: req.query.username },
+      select: { id: true, username: true, role: true, isActive: true },
+    });
+    if (!user || !user.isActive) throw errors.NotFound('User');
+    res.status(200).json({ id: user.id, username: user.username, role: user.role });
+  })
+);
+
 router.get('/guests/:guest_id/family-tree', requireAuth,
   validate({ params: guestIdParam, query: familyTreeQuery }),
   asyncHandler(async (req, res) => {
@@ -174,6 +186,60 @@ router.patch('/gifts/:gift_id/cancel', requireAuth, requireRole('HOST'),
       return g;
     });
     res.status(200).json(giftService.serializeGift(updated));
+  })
+);
+
+router.get('/admin/registries', requireAuth, requireRole('ADMIN'),
+  asyncHandler(async (req, res) => {
+    const rows = await prisma.registry.findMany({
+      include: {
+        host: { select: { id: true, username: true, email: true } },
+        _count: { select: { gifts: true, guests: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.status(200).json({ data: rows });
+  })
+);
+
+router.get('/admin/contributions', requireAuth, requireRole('ADMIN'),
+  asyncHandler(async (req, res) => {
+    const rows = await prisma.contribution.findMany({
+      include: {
+        guest: { select: { displayName: true, registryId: true } },
+        gift: { select: { title: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    res.status(200).json({ data: rows });
+  })
+);
+
+router.get('/admin/audit-logs', requireAuth, requireRole('ADMIN'),
+  asyncHandler(async (req, res) => {
+    const rows = await prisma.auditLog.findMany({
+      include: { user: { select: { username: true, email: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    res.status(200).json({ data: rows });
+  })
+);
+
+router.delete('/admin/registries/:registry_id', requireAuth, requireRole('ADMIN'),
+  validate({ params: z.object({ registry_id: z.string().uuid() }) }),
+  asyncHandler(async (req, res) => {
+    await prisma.registry.delete({ where: { id: req.params.registry_id } });
+    res.status(204).send();
+  })
+);
+
+router.delete('/admin/users/:user_id', requireAuth, requireRole('ADMIN'),
+  validate({ params: z.object({ user_id: z.string().uuid() }) }),
+  asyncHandler(async (req, res) => {
+    await prisma.user.delete({ where: { id: req.params.user_id } });
+    res.status(204).send();
   })
 );
 

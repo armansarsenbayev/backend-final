@@ -1,14 +1,594 @@
 # Deployed URL — Saukele Wedding Registry
 
 ## Backend API
-URL: (будет добавлено после деплоя)
-
+URL: 
 ## Frontend
-URL: (будет добавлено после деплоя)
+URL: 
 
 ## Swagger UI
 URL: (backend_url)/docs
 
 ---
-Deployed on: (дата деплоя)
+Deployed on: 
 Platform: Render / Railway / DeployRocks
+
+Status: Deployment Ready / Infrastructure Blocked
+The application is fully containerized and passed all internal validation stages. However, a public URL is currently unavailable due to a global infrastructure failure on the shared hosting provider (DeployRocks).
+
+Technical Breakdown:
+Containerization: Both Frontend and Backend Docker images were built successfully (DONE 0.1s).
+
+Runtime Validation: Both services passed health checks and reached a running ✅ state within the internal network.
+
+Root Cause of Failure: The shared platform's Global Reverse Proxy (Nginx) failed to reload. This is an upstream infrastructure-level error caused by a configuration conflict in a neighboring project on the same shared host.
+
+Evidence from Deployment Logs:
+The system failed to generate a public certificate and reload the routing table because of an error in another user's configuration:
+
+Plaintext
+[emerg] host not found in upstream "invalid:3000" in /home/dokku/kgrsajid-.../nginx.conf
+nginx: configuration file /etc/nginx/nginx.conf test failed
+[WARN] Deploy FAILED for armansarsenbayev-backend-final-frontend
+Local Verification:
+Since the container logic is sound, the entire stack (Postgres + Redis + Backend + Frontend) can be verified locally using the provided Docker configuration:
+
+Bash
+docker-compose up --build
+
+
+Full Log: 
+armansarsenbayev-backend-final-frontend.crt
+armansarsenbayev-backend-final-frontend.key
+armansarsenbayev-backend-final-frontend.crt
+armansarsenbayev-backend-final-frontend.key
+-----> Unsetting DOKKU_PROXY_PORT
+-----> Unsetting DOKKU_PROXY_SSL_PORT
+ !     No web listeners specified for armansarsenbayev-backend-final-frontend
+[OK] Self-signed SSL cert installed
+Job for nginx.service failed.
+See "systemctl status nginx.service" and "journalctl -xeu nginx.service" for details.
+[SETUP] Deploying armansarsenbayev-backend-final-frontend...
+-----> Fetching tar file from stdin
+18102
+-----> Generating build context
+       Striping 1 worth of directories from tarball
+       Moving unarchived files and folders into place
+-----> Updating git repository with specified build context
+       Detected branch, setting deploy-branch to main
+-----> Cleaning up...
+-----> Building armansarsenbayev-backend-final-frontend from Dockerfile
+#0 building with "default" instance using docker driver
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 545B done
+#1 DONE 0.0s
+#2 [internal] load metadata for docker.io/library/node:20-alpine
+#2 DONE 0.3s
+#3 [internal] load metadata for docker.io/library/alpine:3.19
+#3 DONE 0.7s
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+#5 [internal] load build context
+#5 transferring context: 91.62kB 0.0s done
+#5 DONE 0.1s
+#6 [stage-1 1/4] FROM docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1
+#6 resolve docker.io/library/alpine:3.19@sha256:6baf43584bcb78f2e5847d1de515f23499913ac9f12bdf834811a3145eb11ca1 0.1s done
+#6 DONE 0.1s
+#7 [builder 1/6] FROM docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293
+#7 resolve docker.io/library/node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 0.1s done
+#7 DONE 0.1s
+#8 [builder 5/6] COPY . .
+#8 CACHED
+#9 [stage-1 3/4] COPY --from=builder /app/dist /usr/share/nginx/html
+#9 CACHED
+#10 [stage-1 2/4] RUN apk add --no-cache nginx && mkdir -p /run/nginx /var/log/nginx
+#10 CACHED
+#11 [builder 4/6] RUN npm install
+#11 CACHED
+#12 [builder 6/6] RUN npm run build
+#12 CACHED
+#13 [builder 2/6] WORKDIR /app
+#13 CACHED
+#14 [builder 3/6] COPY package*.json ./
+#14 CACHED
+#15 [stage-1 4/4] COPY nginx.conf /etc/nginx/nginx.conf
+#15 CACHED
+#16 exporting to image
+#16 exporting layers done
+#16 exporting manifest sha256:2de3b0310778f790c4702a57f52344fdfaa2627b1d6b95410298419075330d63 done
+#16 exporting config sha256:39c5ecc0cff015930cc25f15029c7cdf794fd78249b07014ebde3f3cc007314b done
+#16 exporting attestation manifest sha256:cd5572d310249e6cb6889b78b9a0756c9807e41445c8c1320866917554075b06 0.0s done
+#16 exporting manifest list sha256:b50a9e9f6797eb14e46c876ae4cbe705b449dd5158454e21e8f8efe1d9049dac 0.0s done
+#16 naming to docker.io/dokku/armansarsenbayev-backend-final-frontend:latest done
+#16 unpacking to docker.io/dokku/armansarsenbayev-backend-final-frontend:latest done
+#16 DONE 0.1s
+-----> Releasing armansarsenbayev-backend-final-frontend...
+-----> Checking for predeploy task
+       No predeploy task found, skipping
+-----> Checking for release task
+       No release task found, skipping
+=====> Processing deployment checks
+-----> Deploying armansarsenbayev-backend-final-frontend via the docker-local scheduler...
+-----> Deploying web (count=1)
+       Attempting pre-flight checks (web.1)
+-----> Executing 2 healthchecks
+       Running healthcheck name='frontend health' delay=0 path='/' retries=2 timeout=5 type='path'
+       Running healthcheck name='port listening check' attempts=3 port=5000 retries=2 timeout=5 type='listening' wait=5
+       Healthcheck succeeded name='frontend health'
+       Healthcheck succeeded name='port listening check'
+       All checks successful (web.1)
+=====> Start of armansarsenbayev-backend-final-frontend container output (873f74e67205 web.1)
+=====> End of armansarsenbayev-backend-final-frontend container output (873f74e67205 web.1)
+=====> Triggering early nginx proxy rebuild
+-----> Running post-deploy
+-----> Ensuring network configuration is in sync for armansarsenbayev-backend-final-frontend
+-----> Configuring armansarsenbayev-backend-final-frontend.kazi.rocks...(using built-in template)
+-----> Configuring armansarsenbayev-backend-final.kazi.rocks...(using built-in template)
+-----> Creating https nginx.conf
+       Enabling HSTS (using built-in template)
+       Reloading nginx
+ !     No nginx config found for aiymfine-kz-ecomerce-platform-frontend
+ !     No nginx config found for altushkaenjoyer-syilab-app
+ !     No nginx config found for altushkaenjoyer-syilab-frontend
+ !     No nginx config found for altushkaenjoyer-syilab-migrate
+ !     No nginx config found for altushkaenjoyer-syilab-worker
+ !     No nginx config found for altushkaenjoyer-syilab-worker-forensics
+ !     No nginx config found for azaliyasultanbek-create-saukele-backend
+ !     No nginx config found for azaliyasultanbek-create-saukele-backend-backend
+ !     No nginx config found for azaliyasultanbek-create-saukele-backend-currency-worker
+ !     No nginx config found for azaliyasultanbek-create-saukele-backend-email-worker
+ !     No nginx config found for baha2365-backend-circlesave-backend
+ !     No nginx config found for baha2365-backend-circlesave-frontend
+ !     No nginx config found for chech1lka-rescuebite-app
+ !     No nginx config found for codementor
+ !     No nginx config found for devamirk-backend-final-api
+ !     No nginx config found for devamirk-backend-final-frontend
+ !     No nginx config found for dimasubmarina-rescuebite-api
+ !     No nginx config found for dimasubmarina-rescuebite-frontend
+ !     No nginx config found for eaoermak-activity-diary-backend
+ !     No nginx config found for eaoermak-activity-diary-frontend
+ !     No nginx config found for har1se-foodwaste-api
+ !     No nginx config found for har1se-foodwaste-beat
+ !     No nginx config found for har1se-foodwaste-flower
+ !     No nginx config found for har1se-foodwaste-frontend
+ !     No nginx config found for har1se-foodwaste-worker
+ !     No nginx config found for jazzbaev-circlesave
+ !     No nginx config found for kgrsajid-activity-diary-backend-yermek
+ !     Failed to validate nginx config for kgrsajid-aidos-batlabai-shopbuilder-backend. Contents below...
+server {
+  listen      [::]:80;
+  listen      80;
+  server_name kgrsajid-aidos-batlabai-shopbuilder-backend.kazi.rocks; 
+  access_log  /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-backend-access.log;
+  error_log   /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-backend-error.log;
+  underscores_in_headers off;
+  client_body_timeout 60s;
+  client_header_timeout 60s;
+  keepalive_timeout 75s;
+  lingering_timeout 5s;
+  send_timeout 60s;
+  include /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-backend/nginx.conf.d/*.conf;
+  location / {
+    return 301 https://$host:443$request_uri;
+  }
+}
+server {
+  listen      [::]:443 ssl http2;
+  listen      443 ssl http2;
+  server_name kgrsajid-aidos-batlabai-shopbuilder-backend.kazi.rocks; 
+  access_log  /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-backend-access.log;
+  error_log   /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-backend-error.log;
+  underscores_in_headers off;
+  ssl_certificate           /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-backend/tls/server.crt;
+  ssl_certificate_key       /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-backend/tls/server.key;
+  ssl_protocols             TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+  client_body_timeout 60s;
+  client_header_timeout 60s;
+  keepalive_timeout 75s;
+  lingering_timeout 5s;
+  send_timeout 60s;
+  location    / {
+    gzip on;
+    gzip_min_length  1100;
+    gzip_buffers  4 32k;
+    gzip_types    text/css text/javascript text/xml text/plain text/x-component application/javascript application/x-javascript application/json application/xml  application/rss+xml font/truetype application/x-font-ttf font/opentype application/vnd.ms-fontobject image/svg+xml;
+    gzip_vary on;
+    gzip_comp_level  6;
+    proxy_pass  http://kgrsajid-aidos-batlabai-shopbuilder-backend-3000;
+    http2_push_preload on; 
+    proxy_http_version 1.1;
+    proxy_connect_timeout 60s;
+    proxy_read_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_buffer_size 4k;
+    proxy_buffering on;
+    proxy_buffers 8 4k;
+    proxy_busy_buffers_size 8k;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Port $server_port;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Request-Start $msec;
+  }
+  client_max_body_size 1m;
+  error_page 400 401 402 403 405 406 407 408 409 410 411 412 413 414 415 416 417 418 420 422 423 424 426 428 429 431 444 449 450 451 /400-error.html;
+  location /400-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 404 /404-error.html;
+  location /404-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 500 501 503 504 505 506 507 508 509 510 511 /500-error.html;
+  location /500-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 502 /502-error.html;
+  location /502-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  include /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-backend/nginx.conf.d/*.conf;
+}
+upstream kgrsajid-aidos-batlabai-shopbuilder-backend-3000 {
+  server invalid:3000;
+  server IP:3000;
+}
+ !     Failed to validate nginx config for kgrsajid-aidos-batlabai-shopbuilder-worker. Contents below...
+server {
+  listen      [::]:80;
+  listen      80;
+  server_name kgrsajid-aidos-batlabai-shopbuilder-worker.kazi.rocks; 
+  access_log  /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-worker-access.log;
+  error_log   /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-worker-error.log;
+  underscores_in_headers off;
+  client_body_timeout 60s;
+  client_header_timeout 60s;
+  keepalive_timeout 75s;
+  lingering_timeout 5s;
+  send_timeout 60s;
+  include /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-worker/nginx.conf.d/*.conf;
+  location / {
+    return 301 https://$host:443$request_uri;
+  }
+}
+server {
+  listen      [::]:443 ssl http2;
+  listen      443 ssl http2;
+  server_name kgrsajid-aidos-batlabai-shopbuilder-worker.kazi.rocks; 
+  access_log  /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-worker-access.log;
+  error_log   /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-worker-error.log;
+  underscores_in_headers off;
+  ssl_certificate           /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-worker/tls/server.crt;
+  ssl_certificate_key       /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-worker/tls/server.key;
+  ssl_protocols             TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+  client_body_timeout 60s;
+  client_header_timeout 60s;
+  keepalive_timeout 75s;
+  lingering_timeout 5s;
+  send_timeout 60s;
+  location    / {
+    gzip on;
+    gzip_min_length  1100;
+    gzip_buffers  4 32k;
+    gzip_types    text/css text/javascript text/xml text/plain text/x-component application/javascript application/x-javascript application/json application/xml  application/rss+xml font/truetype application/x-font-ttf font/opentype application/vnd.ms-fontobject image/svg+xml;
+    gzip_vary on;
+    gzip_comp_level  6;
+    proxy_pass  http://kgrsajid-aidos-batlabai-shopbuilder-worker-3000;
+    http2_push_preload on; 
+    proxy_http_version 1.1;
+    proxy_connect_timeout 60s;
+    proxy_read_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_buffer_size 4k;
+    proxy_buffering on;
+    proxy_buffers 8 4k;
+    proxy_busy_buffers_size 8k;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Port $server_port;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Request-Start $msec;
+  }
+  client_max_body_size 1m;
+  error_page 400 401 402 403 405 406 407 408 409 410 411 412 413 414 415 416 417 418 420 422 423 424 426 428 429 431 444 449 450 451 /400-error.html;
+  location /400-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 404 /404-error.html;
+  location /404-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 500 501 503 504 505 506 507 508 509 510 511 /500-error.html;
+  location /500-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 502 /502-error.html;
+  location /502-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  include /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-worker/nginx.conf.d/*.conf;
+}
+upstream kgrsajid-aidos-batlabai-shopbuilder-worker-3000 {
+  server invalid:3000;
+  server IP:3000;
+}
+ !     No nginx config found for kgrsajid-khanuma-circlesave-api-backend
+ !     No nginx config found for kgrsajid-khanuma-circlesave-api-email-worker
+ !     No nginx config found for kgrsajid-khanuma-circlesave-api-payment-worker
+ !     No nginx config found for kirillmehopov-design--leanstock-final-backend-last-api
+ !     No nginx config found for kirillmehopov-design--leanstock-final-backend-last-frontend
+ !     No nginx config found for kirillmehopov-design--leanstock-final-backend-last-worker
+ !     No nginx config found for kirillmehopov-design-leanstock-api
+ !     No nginx config found for kirillmehopov-design-leanstock-frontend
+ !     No nginx config found for kirillmehopov-design-leanstock-worker
+ !     No nginx config found for kukili00007-backend-project-migrate
+ !     No nginx config found for kukili00007-backend-project-test
+ !     No nginx config found for laila-luluwa-finalproject-specs-backend
+ !     No nginx config found for laila-luluwa-finalproject-specs-frontend
+ !     No nginx config found for makhkam11-good-leanstock-api
+ !     No nginx config found for makhkam11-good-leanstock-pgadmin
+ !     No nginx config found for makhkam11-good-leanstock-worker
+ !     No nginx config found for medetkb-leanstock-complete-backend-frontend-implementation-app
+ !     No nginx config found for medetkb-leanstock-complete-backend-frontend-implementation-beat
+ !     No nginx config found for medetkb-leanstock-complete-backend-frontend-implementation-worker
+ !     No nginx config found for mergentlegen-eanstock-backend-api
+ !     No nginx config found for mergentlegen-leanstock-backend-api
+ !     No nginx config found for mergentlegen-leanstock-backend-frontend
+ !     No nginx config found for mergentlegen-leanstock-backend-worker
+ !     No nginx config found for nazerke2909-saukele-backend-app
+ !     No nginx config found for nazerke2909-saukele-backend-cron
+ !     No nginx config found for nazerke2909-saukele-backend-migrations
+ !     No nginx config found for nazerke2909-saukele-backend-worker
+ !     No nginx config found for nikeovsky-dopio
+ !     No nginx config found for nikeovsky-dopio-app
+ !     No nginx config found for nikeovsky-dopio-db
+ !     No nginx config found for rakhmatullaevshakhruz8-creator-desktop-tutorial
+ !     No nginx config found for sayat101-shopbuilder-
+ !     No nginx config found for sayat101-shopbuilder-app
+ !     No nginx config found for semgasabe-leanstock-api
+ !     No nginx config found for semgasabe-leanstock-backend
+ !     No nginx config found for semgasabe-leanstock-worker
+ !     No nginx config found for semgasabe-leanstock1-backend
+ !     No nginx config found for semgasabe-leanstock1-worker
+ !     No nginx config found for shokhriyorr-backend-project-of-shahriyor-api
+ !     No nginx config found for shokhriyorr-backend-project-of-shahriyor-frontend
+ !     No nginx config found for shokhriyorr-backend-project-of-shahriyor-worker
+ !     No nginx config found for takahashi0021-shopbuilder2
+ !     No nginx config found for test-deployrocks-12345
+ !     No nginx config found for test-fresh-999
+ !     No nginx config found for test-full-deploy-789
+ !     No nginx config found for test-procfile-456
+ !     No nginx config found for test-procfile-bug
+ !     No nginx config found for test-procfile-extract
+ !     No nginx config found for test-ssl-effect
+ !     No nginx config found for tinkaalol-backend-final-project-backend
+ !     No nginx config found for tksbaev-backend-final-project
+ !     No nginx config found for tksbaev-backend-final-project-backend
+ !     No nginx config found for tksbaev-backend-final-project-rustfs
+ !     No nginx config found for tksbaev-backend-final-project-rustfs-init
+ !     No nginx config found for tksbaev-backend-final-project-rustfs-perms
+ !     No nginx config found for tksbaev-backend-final-project-web-merchant
+ !     No nginx config found for wishreg
+ !     No nginx config found for yersin165-saukele-backend
+ !     No nginx config found for yersultanaldanazar-commits-leanstock-endterm-backend-backend
+ !     No nginx config found for yersultanaldanazar-commits-leanstock-endterm-backend-frontend
+ !     No nginx config found for zhaannss-proveny-final
+2026/05/22 07:16:24 [emerg] 503554#503554: host not found in upstream "invalid:3000" in /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-backend/nginx.conf:104
+nginx: configuration file /etc/nginx/nginx.conf test failed
+[WARN] Deploy FAILED for armansarsenbayev-backend-final-frontend — check: dokku logs armansarsenbayev-backend-final-frontend
+-----> Ensuring network configuration is in sync for armansarsenbayev-backend-final-frontend
+-----> Configuring armansarsenbayev-backend-final-frontend.kazi.rocks...(using built-in template)
+-----> Configuring armansarsenbayev-backend-final.kazi.rocks...(using built-in template)
+-----> Creating https nginx.conf
+       Enabling HSTS (using built-in template)
+       Reloading nginx
+server {
+  listen      [::]:80;
+  listen      80;
+  server_name kgrsajid-aidos-batlabai-shopbuilder-backend.kazi.rocks; 
+  access_log  /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-backend-access.log;
+  error_log   /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-backend-error.log;
+  underscores_in_headers off;
+  client_body_timeout 60s;
+  client_header_timeout 60s;
+  keepalive_timeout 75s;
+  lingering_timeout 5s;
+  send_timeout 60s;
+  include /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-backend/nginx.conf.d/*.conf;
+  location / {
+    return 301 https://$host:443$request_uri;
+  }
+}
+server {
+  listen      [::]:443 ssl http2;
+  listen      443 ssl http2;
+  server_name kgrsajid-aidos-batlabai-shopbuilder-backend.kazi.rocks; 
+  access_log  /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-backend-access.log;
+  error_log   /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-backend-error.log;
+  underscores_in_headers off;
+  ssl_certificate           /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-backend/tls/server.crt;
+  ssl_certificate_key       /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-backend/tls/server.key;
+  ssl_protocols             TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+  client_body_timeout 60s;
+  client_header_timeout 60s;
+  keepalive_timeout 75s;
+  lingering_timeout 5s;
+  send_timeout 60s;
+  location    / {
+    gzip on;
+    gzip_min_length  1100;
+    gzip_buffers  4 32k;
+    gzip_types    text/css text/javascript text/xml text/plain text/x-component application/javascript application/x-javascript application/json application/xml  application/rss+xml font/truetype application/x-font-ttf font/opentype application/vnd.ms-fontobject image/svg+xml;
+    gzip_vary on;
+    gzip_comp_level  6;
+    proxy_pass  http://kgrsajid-aidos-batlabai-shopbuilder-backend-3000;
+    http2_push_preload on; 
+    proxy_http_version 1.1;
+    proxy_connect_timeout 60s;
+    proxy_read_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_buffer_size 4k;
+    proxy_buffering on;
+    proxy_buffers 8 4k;
+    proxy_busy_buffers_size 8k;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Port $server_port;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Request-Start $msec;
+  }
+  client_max_body_size 1m;
+  error_page 400 401 402 403 405 406 407 408 409 410 411 412 413 414 415 416 417 418 420 422 423 424 426 428 429 431 444 449 450 451 /400-error.html;
+  location /400-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 404 /404-error.html;
+  location /404-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 500 501 503 504 505 506 507 508 509 510 511 /500-error.html;
+  location /500-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 502 /502-error.html;
+  location /502-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  include /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-backend/nginx.conf.d/*.conf;
+}
+upstream kgrsajid-aidos-batlabai-shopbuilder-backend-3000 {
+  server invalid:3000;
+  server IP:3000;
+}
+server {
+  listen      [::]:80;
+  listen      80;
+  server_name kgrsajid-aidos-batlabai-shopbuilder-worker.kazi.rocks; 
+  access_log  /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-worker-access.log;
+  error_log   /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-worker-error.log;
+  underscores_in_headers off;
+  client_body_timeout 60s;
+  client_header_timeout 60s;
+  keepalive_timeout 75s;
+  lingering_timeout 5s;
+  send_timeout 60s;
+  include /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-worker/nginx.conf.d/*.conf;
+  location / {
+    return 301 https://$host:443$request_uri;
+  }
+}
+server {
+  listen      [::]:443 ssl http2;
+  listen      443 ssl http2;
+  server_name kgrsajid-aidos-batlabai-shopbuilder-worker.kazi.rocks; 
+  access_log  /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-worker-access.log;
+  error_log   /var/log/nginx/kgrsajid-aidos-batlabai-shopbuilder-worker-error.log;
+  underscores_in_headers off;
+  ssl_certificate           /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-worker/tls/server.crt;
+  ssl_certificate_key       /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-worker/tls/server.key;
+  ssl_protocols             TLSv1.2 TLSv1.3;
+  ssl_prefer_server_ciphers off;
+  client_body_timeout 60s;
+  client_header_timeout 60s;
+  keepalive_timeout 75s;
+  lingering_timeout 5s;
+  send_timeout 60s;
+  location    / {
+    gzip on;
+    gzip_min_length  1100;
+    gzip_buffers  4 32k;
+    gzip_types    text/css text/javascript text/xml text/plain text/x-component application/javascript application/x-javascript application/json application/xml  application/rss+xml font/truetype application/x-font-ttf font/opentype application/vnd.ms-fontobject image/svg+xml;
+    gzip_vary on;
+    gzip_comp_level  6;
+    proxy_pass  http://kgrsajid-aidos-batlabai-shopbuilder-worker-3000;
+    http2_push_preload on; 
+    proxy_http_version 1.1;
+    proxy_connect_timeout 60s;
+    proxy_read_timeout 60s;
+    proxy_send_timeout 60s;
+    proxy_buffer_size 4k;
+    proxy_buffering on;
+    proxy_buffers 8 4k;
+    proxy_busy_buffers_size 8k;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-For $remote_addr;
+    proxy_set_header X-Forwarded-Port $server_port;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_set_header X-Request-Start $msec;
+  }
+  client_max_body_size 1m;
+  error_page 400 401 402 403 405 406 407 408 409 410 411 412 413 414 415 416 417 418 420 422 423 424 426 428 429 431 444 449 450 451 /400-error.html;
+  location /400-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 404 /404-error.html;
+  location /404-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 500 501 503 504 505 506 507 508 509 510 511 /500-error.html;
+  location /500-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  error_page 502 /502-error.html;
+  location /502-error.html {
+    root /var/lib/dokku/data/nginx-vhosts/dokku-errors;
+    internal;
+  }
+  include /home/dokku/kgrsajid-aidos-batlabai-shopbuilder-worker/nginx.conf.d/*.conf;
+}
+upstream kgrsajid-aidos-batlabai-shopbuilder-worker-3000 {
+  server invalid:3000;
+  server IP:3000;
+}
+[SETUP] 
+[SETUP] ═══ Smoke Test ═══
+[SETUP] Waiting 20s for containers to build and start...
+[OK] armansarsenbayev-backend-final-backend: running ✅
+[OK] armansarsenbayev-backend-final-frontend: running ✅
+[SETUP] 
+[SETUP] ═══ Deployment Summary ═══
+[SETUP] Deployed (0):
+[SETUP] Failed (2):
+[SETUP]   ❌ armansarsenbayev-backend-final-backend
+[SETUP]      Logs:  dokku logs armansarsenbayev-backend-final-backend
+[SETUP]      Shell: dokku enter armansarsenbayev-backend-final-backend
+[SETUP]   ❌ armansarsenbayev-backend-final-frontend
+[SETUP]      Logs:  dokku logs armansarsenbayev-backend-final-frontend
+[SETUP]      Shell: dokku enter armansarsenbayev-backend-final-frontend
+[WARN] To clean up failed apps: dokku apps:destroy --force <app-name>
+[SETUP] DEPLOYED_DOKKU_APPS_START
+[SETUP] DEPLOYED_DOKKU_APPS_END
+[SETUP] FAILED_DOKKU_APPS_START
+armansarsenbayev-backend-final-backend|armansarsenbayev-backend-final-frontend
+[SETUP] FAILED_DOKKU_APPS_END
+[SETUP] DEPLOYED_DBS_START
+armansarsenbayev-backend-final-postgres:postgres
+armansarsenbayev-backend-final-redis:redis
+[SETUP] DEPLOYED_DBS_END
+[SETUP] DEPLOYED_NETWORK=armansarsenbayev-backend-final-net

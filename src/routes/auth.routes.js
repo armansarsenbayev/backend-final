@@ -44,7 +44,7 @@ router.post('/login', authLimiter, validate({ body: loginSchema }),
       email: req.body.email, password: req.body.password,
       userAgent: req.get('user-agent'), ipAddress: req.ip,
     });
-    res.status(200).json(result.tokens);
+    res.status(200).json(result);
   })
 );
 
