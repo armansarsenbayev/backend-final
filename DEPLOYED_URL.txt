@@ -1,4 +1,10 @@
 # Deployed URL — Saukele Wedding Registry
+postgresql://arman:AnAkEZRACzefViYPfZY2v8qEf7Y6yPCN@dpg-d881mqe7r5hc73f6b740-a/saukele_db
+postgresql://arman:AnAkEZRACzefViYPfZY2v8qEf7Y6yPCN@dpg-d881mqe7r5hc73f6b740-a.oregon-postgres.render.com/saukele_db
+render psql dpg-d881mqe7r5hc73f6b740-a
+##Redis
+redis://red-d881ooeq1p3s73fqk3a0:6379
+
 
 ## Backend API
 URL: 
