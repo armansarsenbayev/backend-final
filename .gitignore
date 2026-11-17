@@ -9,3 +9,5 @@ coverage/
 .vscode/
 dist/
 build/
+# Local tooling
+.claude/
