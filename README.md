@@ -194,7 +194,7 @@ Run the full stack (PostgreSQL + Redis + Backend + Frontend) with a single comma
 ```bash
 # 1. Copy and configure environment
 cp .env.example .env
-# Edit .env — fill in JWT secrets, Resend API key, ADMIN_REGISTRATION_KEY
+# Edit .env — fill in POSTGRES_PASSWORD, JWT secrets, Resend API key, ADMIN_REGISTRATION_KEY
 
 # 2. Build and start all services
 docker compose up --build -d
@@ -209,7 +209,7 @@ docker compose logs backend --tail=50
 | Backend   | http://localhost:3000            | Express API                    |
 | Swagger   | http://localhost:3000/docs       | Interactive API docs           |
 | Frontend  | http://localhost:5173            | React SPA served via nginx     |
-| Postgres  | localhost:5432                   | saukele / saukele_pass         |
+| Postgres  | localhost:5432                   | user `saukele`, password from `POSTGRES_PASSWORD` |
 | Redis     | localhost:6379                   | BullMQ queue                   |
 
 Prisma migrations run **automatically** on backend container startup.
