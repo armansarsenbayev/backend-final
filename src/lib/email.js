@@ -110,7 +110,7 @@ async function sendGiftFundedEmail({ to, hostUsername, giftTitle, registryTitle 
   });
 }
 
-async function sendGiftPurchasedEmail({ to, hostUsername, giftTitle, courierId }) {
+async function sendGiftPurchasedEmail({ to, hostUsername, giftTitle }) {
   return sendEmail({
     to,
     subject: `📦 "${giftTitle}" has been purchased!`,
