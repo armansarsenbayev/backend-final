@@ -27,8 +27,8 @@ A production-grade backend for managing Kazakh wedding gift registries with fami
 
 ### 2. Clone & Install
 ```bash
-git clone https://github.com/YOUR_USERNAME/saukele-backend
-cd saukele-backend
+git clone https://github.com/armansarsenbayev/saukele-wedding-registry.git
+cd saukele-wedding-registry
 npm install
 ```
 
@@ -64,6 +64,24 @@ Swagger UI at `http://localhost:3000/docs`
 npm test          # all tests with coverage
 npm run test:unit # unit tests only
 ```
+
+## Documentation
+
+Project documentation lives in [`docs/`](docs/):
+
+| File | Contents |
+|------|----------|
+| [`docs/openapi.yaml`](docs/openapi.yaml) | OpenAPI spec, served as Swagger UI at `/docs` |
+| [`docs/architecture.txt`](docs/architecture.txt) | Architecture overview |
+| [`docs/database-schema.txt`](docs/database-schema.txt) | Database schema |
+| [`docs/features-specification.txt`](docs/features-specification.txt) | Features specification |
+| [`docs/project-structure.txt`](docs/project-structure.txt) | Project structure |
+| [`docs/security-analysis.txt`](docs/security-analysis.txt) | Security analysis |
+| [`docs/postman/`](docs/postman/) | Postman collection and environment (`http://localhost:3000`) |
+
+Changes from the original design are listed in [`CHANGELOG.md`](CHANGELOG.md).
+
+---
 
 ## Architecture
 
