@@ -40,13 +40,13 @@ describe('Auth flow (integration)', () => {
       password: 'Saukele2025!',
     });
     expect(login.status).toBe(200);
-    expect(login.body.access_token).toBeDefined();
-    expect(login.body.refresh_token).toBeDefined();
-    expect(login.body.token_type).toBe('Bearer');
+    expect(login.body.tokens.access_token).toBeDefined();
+    expect(login.body.tokens.refresh_token).toBeDefined();
+    expect(login.body.tokens.token_type).toBe('Bearer');
 
     const me = await request(app)
       .get('/api/v1/auth/me')
-      .set('Authorization', `Bearer ${login.body.access_token}`);
+      .set('Authorization', `Bearer ${login.body.tokens.access_token}`);
     expect(me.status).toBe(200);
     expect(me.body.email).toBe('aizhan@example.kz');
   });
@@ -103,7 +103,7 @@ describe('Auth flow (integration)', () => {
       email: 'rot@example.com',
       password: 'StrongPass1!',
     });
-    const oldRefresh = login.body.refresh_token;
+    const oldRefresh = login.body.tokens.refresh_token;
 
     const r1 = await request(app)
       .post('/api/v1/auth/refresh')
@@ -138,13 +138,13 @@ describe('Auth flow (integration)', () => {
 
     const out = await request(app)
       .post('/api/v1/auth/logout')
-      .set('Authorization', `Bearer ${login.body.access_token}`)
-      .send({ refresh_token: login.body.refresh_token });
+      .set('Authorization', `Bearer ${login.body.tokens.access_token}`)
+      .send({ refresh_token: login.body.tokens.refresh_token });
     expect(out.status).toBe(204);
 
     const reuse = await request(app)
       .post('/api/v1/auth/refresh')
-      .send({ refresh_token: login.body.refresh_token });
+      .send({ refresh_token: login.body.tokens.refresh_token });
     expect(reuse.status).toBe(401);
   });
 });
